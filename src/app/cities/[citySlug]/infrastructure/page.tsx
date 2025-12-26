@@ -5,46 +5,105 @@
  * Displays transportation, utilities, internet, housing data
  */
 
+import { MetricCard, ChartCard } from '@/components';
+
 interface InfrastructurePageProps {
   params: {
     citySlug: string;
   };
 }
 
-export default function InfrastructurePage({ params }: InfrastructurePageProps) {
-  const { citySlug } = params;
-
+export default function InfrastructurePage() {
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-xl font-semibold text-text-primary mb-2">
-          Infrastructure
-        </h2>
-        <p className="text-text-secondary">
-          Transportation, connectivity, and housing data for {citySlug.replace(/-/g, ' ')}
-        </p>
-      </div>
-
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {[
-          { label: 'Transit Coverage', value: '—', unit: '%' },
-          { label: 'Internet Speed', value: '—', unit: 'Mbps' },
-          { label: 'Housing Vacancy', value: '—', unit: '%' },
-          { label: 'Road Quality', value: '—', unit: '/100' },
-        ].map((metric) => (
-          <div key={metric.label} className="card-metric">
-            <div className="card-metric-label">{metric.label}</div>
-            <div className="card-metric-value">{metric.value}</div>
-            <div className="text-xs text-text-tertiary mt-1">{metric.unit}</div>
-          </div>
-        ))}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <MetricCard
+          label="Public Transit Score"
+          value="8.5/10"
+          change={{ value: 0.3, period: 'vs last year' }}
+          trend="up"
+          status="good"
+          icon="🚇"
+        />
+        <MetricCard
+          label="Internet Speed"
+          value="450 Mbps"
+          change={{ value: 12.5, period: 'YoY' }}
+          trend="up"
+          status="good"
+          icon="📡"
+        />
+        <MetricCard
+          label="Power Reliability"
+          value="99.8%"
+          change={{ value: 0.1, period: 'vs last year' }}
+          trend="up"
+          status="good"
+          icon="⚡"
+        />
+        <MetricCard
+          label="Water Quality"
+          value="95/100"
+          change={{ value: 2, period: 'vs last year' }}
+          trend="up"
+          status="good"
+          icon="💧"
+        />
       </div>
 
-      <div className="card p-8">
-        <p className="text-text-secondary text-center">
-          Infrastructure metrics and visualizations will be loaded here
-        </p>
+      {/* Transportation Overview */}
+      <div className="card p-6">
+        <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
+          <span>🚊</span>
+          Transportation Network
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="text-center p-4 bg-surface-elevated rounded-lg">
+            <div className="text-3xl mb-2">🚇</div>
+            <div className="text-2xl font-bold text-text-primary mb-1">12</div>
+            <div className="text-sm text-text-secondary">Metro Lines</div>
+          </div>
+          <div className="text-center p-4 bg-surface-elevated rounded-lg">
+            <div className="text-3xl mb-2">🚌</div>
+            <div className="text-2xl font-bold text-text-primary mb-1">145</div>
+            <div className="text-sm text-text-secondary">Bus Routes</div>
+          </div>
+          <div className="text-center p-4 bg-surface-elevated rounded-lg">
+            <div className="text-3xl mb-2">🚴</div>
+            <div className="text-2xl font-bold text-text-primary mb-1">320</div>
+            <div className="text-sm text-text-secondary">Bike Stations</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ChartCard
+          title="Commute Times"
+          description="Average commute by transport mode"
+        >
+          <div className="h-64 flex items-center justify-center text-text-tertiary">
+            <div className="text-center">
+              <div className="text-5xl mb-4">⏱️</div>
+              <p>Commute time analysis</p>
+              <p className="text-sm mt-2">Chart integration pending</p>
+            </div>
+          </div>
+        </ChartCard>
+
+        <ChartCard
+          title="Utility Coverage"
+          description="Infrastructure coverage by area"
+        >
+          <div className="h-64 flex items-center justify-center text-text-tertiary">
+            <div className="text-center">
+              <div className="text-5xl mb-4">🗺️</div>
+              <p>Coverage map</p>
+              <p className="text-sm mt-2">Chart integration pending</p>
+            </div>
+          </div>
+        </ChartCard>
       </div>
     </div>
   );

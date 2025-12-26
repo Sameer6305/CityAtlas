@@ -12,3 +12,6 @@ export { TabNavigation } from './TabNavigation';
 export { MetricCard, MetricCardGrid } from './MetricCard';
 export { ChartCard, ChartCardGrid, ChartPlaceholder } from './ChartCard';
 export { ThemeProvider } from './ThemeProvider';
+
+// Chart components
+export { LineChart, AreaChart, BarChart, PieChart } from './charts';

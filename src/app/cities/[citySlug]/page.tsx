@@ -6,17 +6,50 @@
  * Shows high-level city information and key metrics.
  */
 
-import { MetricCard, ChartCard } from '@/components';
+'use client';
 
-interface CityOverviewPageProps {
-  params: {
-    citySlug: string;
-  };
-}
+import { MetricCard, ChartCard, AreaChart, BarChart } from '@/components';
+
+// Sample population growth data
+const populationData = [
+  { year: '2015', population: 7.8 },
+  { year: '2016', population: 7.9 },
+  { year: '2017', population: 8.0 },
+  { year: '2018', population: 8.1 },
+  { year: '2019', population: 8.2 },
+  { year: '2020', population: 8.1 },
+  { year: '2021', population: 8.2 },
+  { year: '2022', population: 8.25 },
+  { year: '2023', population: 8.3 },
+];
+
+// Cost of living breakdown
+const costOfLivingData = [
+  { category: 'Housing', index: 195 },
+  { category: 'Food', index: 142 },
+  { category: 'Transport', index: 128 },
+  { category: 'Healthcare', index: 135 },
+  { category: 'Education', index: 168 },
+];
+
+const costColors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'];
 
 export default function CityOverviewPage() {
   return (
     <div className="space-y-8">
+      {/* Page Header */}
+      <div className="mb-8">
+        <div className="inline-block px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium mb-3">
+          City Overview
+        </div>
+        <h1 className="text-3xl md:text-4xl font-bold text-text-primary mb-2">
+          Key Metrics & Highlights
+        </h1>
+        <p className="text-text-secondary text-lg">
+          High-level overview of city performance and characteristics
+        </p>
+      </div>
+
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
@@ -50,35 +83,48 @@ export default function CityOverviewPage() {
       </div>
 
       {/* Charts Section */}
+      <div className="mb-4">
+        <h2 className="text-2xl font-bold text-text-primary mb-2">📊 Trends & Analytics</h2>
+        <p className="text-text-secondary">Historical data and growth patterns</p>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ChartCard
           title="Population Growth Trend"
-          description="Historical population data over the last 10 years"
+          description="Historical population data over the last 9 years (in millions)"
         >
-          <div className="h-64 flex items-center justify-center text-text-tertiary">
-            <div className="text-center">
-              <div className="text-5xl mb-4">📈</div>
-              <p>Population growth chart</p>
-              <p className="text-sm mt-2">Chart integration pending</p>
-            </div>
-          </div>
+          <AreaChart
+            data={populationData}
+            xKey="year"
+            areas={[
+              { dataKey: 'population', name: 'Population (M)', color: '#6366f1', fillOpacity: 0.6 },
+            ]}
+            yAxisLabel="Population (Millions)"
+            height={280}
+          />
         </ChartCard>
 
         <ChartCard
-          title="Economic Indicators"
-          description="Key economic metrics and trends"
+          title="Cost of Living Index"
+          description="Comparison by category (National Average = 100)"
         >
-          <div className="h-64 flex items-center justify-center text-text-tertiary">
-            <div className="text-center">
-              <div className="text-5xl mb-4">💹</div>
-              <p>Economic indicators chart</p>
-              <p className="text-sm mt-2">Chart integration pending</p>
-            </div>
-          </div>
+          <BarChart
+            data={costOfLivingData}
+            xKey="category"
+            bars={[
+              { dataKey: 'index', name: 'Cost Index', color: '#8b5cf6' },
+            ]}
+            yAxisLabel="Index Value"
+            height={280}
+            customColors={costColors}
+          />
         </ChartCard>
       </div>
 
       {/* City Highlights */}
+      <div className="mb-4">
+        <h2 className="text-2xl font-bold text-text-primary mb-2">🎯 Strengths & Challenges</h2>
+        <p className="text-text-secondary">Key advantages and areas for improvement</p>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="card p-6">
           <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
@@ -142,17 +188,5 @@ export default function CityOverviewPage() {
       </div>
     </div>
   );
-}
-
-/**
- * Generate metadata for SEO
- */
-export async function generateMetadata({ params }: CityOverviewPageProps) {
-  const cityName = params.citySlug.replace(/-/g, ' ');
-  
-  return {
-    title: `${cityName} - Overview | CityAtlas`,
-    description: `Explore ${cityName}'s city profile including population, economy, infrastructure, and more.`,
-  };
 }
 

@@ -151,18 +151,21 @@ export default function Home() {
         </section>
 
         {/* Featured Cities Section */}
-        <section className="py-20 px-6 bg-surface/30">
+        <section className="py-24 px-6 bg-gradient-to-b from-surface/30 to-background">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-text-primary mb-4">
+            <div className="text-center mb-16">
+              <div className="inline-block px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-medium mb-4">
+                Popular Destinations
+              </div>
+              <h2 className="text-4xl md:text-5xl font-bold text-text-primary mb-4">
                 Featured Cities
               </h2>
-              <p className="text-text-secondary text-lg">
+              <p className="text-text-secondary text-xl max-w-2xl mx-auto">
                 Start exploring data-driven city profiles
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {featuredCities.map((city, index) => (
                 <Link
                   key={city.slug}
@@ -194,13 +197,16 @@ export default function Home() {
         </section>
 
         {/* Features Section */}
-        <section className="py-20 px-6">
+        <section className="py-24 px-6 border-t border-surface-border">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-text-primary mb-4">
+            <div className="text-center mb-16">
+              <div className="inline-block px-4 py-2 bg-accent/10 text-accent rounded-full text-sm font-medium mb-4">
+                Platform Features
+              </div>
+              <h2 className="text-4xl md:text-5xl font-bold text-text-primary mb-4">
                 Why CityAtlas?
               </h2>
-              <p className="text-text-secondary text-lg">
+              <p className="text-text-secondary text-xl max-w-2xl mx-auto">
                 Data-driven insights for smarter decisions
               </p>
             </div>

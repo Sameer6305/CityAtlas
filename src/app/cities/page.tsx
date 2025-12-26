@@ -74,22 +74,32 @@ export default function CitiesPage() {
       
       {/* Hero Section */}
       <div className="bg-gradient-to-br from-primary/20 via-accent/10 to-background border-b border-surface-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center">
-            <h1 className="text-4xl md:text-5xl font-bold text-text-primary mb-4 animate-fade-in-up">
+            <div className="inline-block px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-medium mb-6 animate-fade-in-up">
+              City Directory
+            </div>
+            <h1 className="text-5xl md:text-6xl font-bold text-text-primary mb-6 animate-fade-in-up delay-100">
               Explore Cities
             </h1>
-            <p className="text-xl text-text-secondary max-w-2xl mx-auto animate-fade-in-up delay-200">
+            <p className="text-xl md:text-2xl text-text-secondary max-w-3xl mx-auto animate-fade-in-up delay-200">
               Dive deep into city data, analytics, and insights across major metropolitan areas
             </p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Search Bar */}
-        <div className="mb-12">
-          <div className="relative max-w-2xl mx-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">{/* Search Bar */}
+        <div className="mb-16">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-text-primary mb-2">Find Your City</h2>
+            <p className="text-text-secondary">Search from our database of world-class cities</p>
+          </div>
+          <div className="relative max-w-2xl mx-auto">{searchQuery && (
+              <div className="absolute -top-8 right-0 text-sm text-text-tertiary">
+                {filteredCities.length} {filteredCities.length === 1 ? 'result' : 'results'}
+              </div>
+            )}
             <input
               type="text"
               placeholder="Search cities by name or country..."
