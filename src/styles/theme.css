@@ -1,0 +1,410 @@
+/**
+ * CityAtlas Design System - Theme Variables
+ * Dark-first SaaS analytics platform
+ * 
+ * Design Principles:
+ * 1. Dark mode reduces eye strain for data-heavy interfaces
+ * 2. High contrast ensures WCAG 2.1 AA compliance
+ * 3. Color carries meaning: Blue = action, Green = positive, Red = negative
+ * 4. Spacing follows 4px base grid for consistency
+ */
+
+:root {
+  /* ========================================
+     COLOR PALETTE
+     ======================================== */
+  
+  /* Background Colors - Deep blacks for true dark mode */
+  --color-background: #0a0a0f;           /* Main background - deep space black */
+  --color-surface: #141419;              /* Card/panel background - elevated surface */
+  --color-surface-elevated: #1a1a24;     /* Hover/active states - highest elevation */
+  --color-surface-border: #2a2a35;       /* Subtle borders - defines boundaries */
+  
+  /* Primary Brand Colors - Electric blue for CTAs and interactive elements */
+  --color-primary: #3b82f6;              /* Main brand color - sky blue */
+  --color-primary-hover: #2563eb;        /* Hover state - deeper blue */
+  --color-primary-muted: #1e3a8a;        /* Active/selected background - navy */
+  --color-primary-light: #60a5fa;        /* Lighter variant for highlights */
+  
+  /* Accent Colors - Purple for secondary highlights */
+  --color-accent: #8b5cf6;               /* Accent color - vibrant purple */
+  --color-accent-hover: #7c3aed;         /* Hover state */
+  
+  /* Semantic Colors - Status and feedback */
+  --color-success: #10b981;              /* Green - positive metrics, success states */
+  --color-success-bg: #064e3b;           /* Success background */
+  --color-warning: #f59e0b;              /* Amber - caution, moderate risk */
+  --color-warning-bg: #78350f;           /* Warning background */
+  --color-danger: #ef4444;               /* Red - negative metrics, errors */
+  --color-danger-bg: #7f1d1d;            /* Danger background */
+  --color-info: #06b6d4;                 /* Cyan - informational */
+  --color-info-bg: #164e63;              /* Info background */
+  
+  /* Text Colors - Hierarchy through opacity */
+  --color-text-primary: #f8fafc;         /* Bright white - headings, important text */
+  --color-text-secondary: #94a3b8;       /* Muted gray - body text, descriptions */
+  --color-text-tertiary: #64748b;        /* Darker gray - labels, captions */
+  --color-text-link: #60a5fa;            /* Link blue - interactive text */
+  --color-text-disabled: #475569;        /* Disabled state */
+  
+  /* Chart Colors - High contrast for data visualization */
+  --color-chart-1: #3b82f6;              /* Blue - primary data series */
+  --color-chart-2: #8b5cf6;              /* Purple - secondary series */
+  --color-chart-3: #10b981;              /* Green - positive trends */
+  --color-chart-4: #f59e0b;              /* Amber - caution/neutral */
+  --color-chart-5: #ec4899;              /* Pink - tertiary series */
+  --color-chart-6: #06b6d4;              /* Cyan - quaternary series */
+  
+  /* ========================================
+     TYPOGRAPHY
+     ======================================== */
+  
+  /* Font Families */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  
+  /* Font Sizes - Type scale based on 16px base */
+  --text-xs: 0.75rem;      /* 12px - tiny labels, badges */
+  --text-sm: 0.875rem;     /* 14px - body text, captions */
+  --text-base: 1rem;       /* 16px - default body */
+  --text-lg: 1.125rem;     /* 18px - card titles */
+  --text-xl: 1.25rem;      /* 20px - section headers */
+  --text-2xl: 1.5rem;      /* 24px - page titles */
+  --text-3xl: 2rem;        /* 32px - hero numbers, big stats */
+  --text-4xl: 2.5rem;      /* 40px - landing page headlines */
+  
+  /* Font Weights */
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  
+  /* Line Heights - Optimized for readability */
+  --leading-tight: 1.25;   /* Headings */
+  --leading-snug: 1.375;   /* Subheadings */
+  --leading-normal: 1.5;   /* Body text */
+  --leading-relaxed: 1.625; /* Long-form content */
+  --leading-loose: 2;      /* Spaced content */
+  
+  /* Letter Spacing */
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.025em;
+  
+  /* ========================================
+     SPACING SYSTEM
+     ======================================== */
+  
+  /* Base: 4px grid system for consistent spacing */
+  --space-0: 0;
+  --space-1: 0.25rem;      /* 4px */
+  --space-2: 0.5rem;       /* 8px */
+  --space-3: 0.75rem;      /* 12px */
+  --space-4: 1rem;         /* 16px - base spacing unit */
+  --space-5: 1.25rem;      /* 20px */
+  --space-6: 1.5rem;       /* 24px */
+  --space-8: 2rem;         /* 32px */
+  --space-10: 2.5rem;      /* 40px */
+  --space-12: 3rem;        /* 48px */
+  --space-16: 4rem;        /* 64px */
+  --space-20: 5rem;        /* 80px */
+  --space-24: 6rem;        /* 96px */
+  
+  /* ========================================
+     BORDER RADIUS
+     ======================================== */
+  
+  --radius-none: 0;
+  --radius-sm: 0.375rem;   /* 6px - buttons, small elements */
+  --radius-md: 0.5rem;     /* 8px - cards, inputs */
+  --radius-lg: 0.75rem;    /* 12px - modals, large cards */
+  --radius-xl: 1rem;       /* 16px - hero sections */
+  --radius-full: 9999px;   /* Fully rounded - pills, avatars */
+  
+  /* ========================================
+     SHADOWS
+     ======================================== */
+  
+  /* Dark mode shadows use black with higher opacity */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.7);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.8);
+  --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.85);
+  
+  /* Colored shadows for interactive elements */
+  --shadow-glow-primary: 0 0 20px rgba(59, 130, 246, 0.3);
+  --shadow-glow-accent: 0 0 20px rgba(139, 92, 246, 0.3);
+  --shadow-glow-success: 0 0 20px rgba(16, 185, 129, 0.3);
+  
+  /* ========================================
+     TRANSITIONS
+     ======================================== */
+  
+  /* Duration */
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 300ms;
+  --duration-slower: 500ms;
+  
+  /* Easing functions */
+  --ease-linear: linear;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  
+  /* ========================================
+     Z-INDEX LAYERS
+     ======================================== */
+  
+  --z-base: 0;
+  --z-dropdown: 1000;
+  --z-sticky: 1100;
+  --z-fixed: 1200;
+  --z-modal-backdrop: 1300;
+  --z-modal: 1400;
+  --z-popover: 1500;
+  --z-tooltip: 1600;
+  
+  /* ========================================
+     LAYOUT
+     ======================================== */
+  
+  /* Container widths */
+  --container-xs: 640px;
+  --container-sm: 768px;
+  --container-md: 1024px;
+  --container-lg: 1280px;
+  --container-xl: 1536px;
+  
+  /* Grid */
+  --grid-cols: 12;
+  --grid-gap: var(--space-6);
+  
+  /* Breakpoints (for reference in JS) */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+}
+
+/* ========================================
+   COMPONENT PRESETS
+   ======================================== */
+
+/* Card Styles */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  transition: all var(--duration-base) var(--ease-out);
+}
+
+.card:hover {
+  background: var(--color-surface-elevated);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.card-elevated {
+  background: var(--color-surface-elevated);
+  box-shadow: var(--shadow-md);
+}
+
+/* Metric Card - for KPI displays */
+.card-metric {
+  background: var(--color-surface);
+  border: 1px solid var(--color-surface-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  text-align: left;
+}
+
+.card-metric-value {
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+  line-height: var(--leading-tight);
+}
+
+.card-metric-label {
+  font-size: var(--text-sm);
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--space-2);
+}
+
+.card-metric-change {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  margin-top: var(--space-2);
+}
+
+.card-metric-change.positive {
+  color: var(--color-success);
+}
+
+.card-metric-change.negative {
+  color: var(--color-danger);
+}
+
+/* Grid System */
+.grid-container {
+  display: grid;
+  gap: var(--grid-gap);
+  width: 100%;
+}
+
+.grid-cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.grid-cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.grid-cols-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* ========================================
+   ACCESSIBILITY RULES
+   ======================================== */
+
+/* Focus states - must be visible in dark mode */
+*:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  box-shadow: var(--shadow-glow-primary);
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast mode adjustments */
+@media (prefers-contrast: high) {
+  :root {
+    --color-surface-border: #4a4a55;
+    --color-text-secondary: #cbd5e1;
+  }
+}
+
+/* Print styles */
+@media print {
+  :root {
+    --color-background: #ffffff;
+    --color-surface: #ffffff;
+    --color-text-primary: #000000;
+    --color-text-secondary: #333333;
+  }
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+/* Text utilities */
+.text-primary { color: var(--color-text-primary); }
+.text-secondary { color: var(--color-text-secondary); }
+.text-tertiary { color: var(--color-text-tertiary); }
+.text-link { color: var(--color-text-link); }
+
+/* Background utilities */
+.bg-surface { background: var(--color-surface); }
+.bg-elevated { background: var(--color-surface-elevated); }
+
+/* Status badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-full);
+  line-height: 1;
+}
+
+.badge-success {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.badge-warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.badge-danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.badge-info {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+/* ========================================
+   LIGHT THEME
+   ======================================== */
+
+:root.light {
+  /* Background Colors - Clean whites and light grays */
+  --color-background: #ffffff;
+  --color-surface: #f8f9fa;
+  --color-surface-elevated: #ffffff;
+  --color-surface-border: #e2e8f0;
+  
+  /* Primary Colors - Maintain brand identity */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-muted: #dbeafe;
+  --color-primary-light: #3b82f6;
+  
+  /* Accent Colors */
+  --color-accent: #7c3aed;
+  --color-accent-hover: #6d28d9;
+  
+  /* Semantic Colors */
+  --color-success: #059669;
+  --color-success-bg: #d1fae5;
+  --color-warning: #d97706;
+  --color-warning-bg: #fef3c7;
+  --color-danger: #dc2626;
+  --color-danger-bg: #fee2e2;
+  --color-info: #0891b2;
+  --color-info-bg: #cffafe;
+  
+  /* Text Colors - Dark text on light backgrounds */
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-tertiary: #94a3b8;
+  --color-text-link: #2563eb;
+  --color-text-disabled: #cbd5e1;
+  
+  /* Shadows - Lighter, more subtle */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+  --shadow-2xl: 0 25px 50px rgba(0, 0, 0, 0.18);
+  
+  /* Colored glows */
+  --shadow-glow-primary: 0 0 20px rgba(37, 99, 235, 0.2);
+  --shadow-glow-accent: 0 0 20px rgba(124, 58, 237, 0.2);
+  --shadow-glow-success: 0 0 20px rgba(5, 150, 105, 0.2);
+}
