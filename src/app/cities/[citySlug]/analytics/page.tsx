@@ -2,161 +2,119 @@
  * Analytics Section Page
  * Route: /cities/[citySlug]/analytics
  * 
- * Displays trend graphs, forecasts, peer city comparisons
+ * Enterprise analytics dashboard with reusable chart components
  */
 
 'use client';
 
-import { MetricCard, ChartCard, LineChart, BarChart } from '@/components';
-
-// Multi-year growth trends
-const growthTrendData = [
-  { year: '2020', gdp: 78, population: 7.9, employment: 82 },
-  { year: '2021', gdp: 82, population: 8.1, employment: 84 },
-  { year: '2022', gdp: 88, population: 8.25, employment: 87 },
-  { year: '2023', gdp: 92, population: 8.3, employment: 89 },
-  { year: '2024', gdp: 95, population: 8.4, employment: 91 },
-];
-
-// Peer city comparison
-const peerComparisonData = [
-  { city: 'This City', score: 92 },
-  { city: 'Seattle', score: 88 },
-  { city: 'Boston', score: 86 },
-  { city: 'Austin', score: 84 },
-  { city: 'Denver', score: 82 },
-];
+import { ChartCard } from '@/components';
+import { AQITrendChart } from '@/components/charts/AQITrendChart';
+import { JobSectorChart } from '@/components/charts/JobSectorChart';
+import { CostOfLivingChart } from '@/components/charts/CostOfLivingChart';
+import { PopulationChart } from '@/components/charts/PopulationChart';
+import { 
+  getAQITrendData, 
+  getJobSectorData, 
+  getCostOfLivingData, 
+  getPopulationData 
+} from '@/lib/mock';
 
 export default function AnalyticsPage() {
+  // Note: In production, city data would be fetched using params.citySlug
+  // Example: const data = await fetch(`/api/cities/${params.citySlug}/analytics`)
+  
+  const aqiData = getAQITrendData();
+  const jobData = getJobSectorData();
+  const costData = getCostOfLivingData();
+  const populationData = getPopulationData();
+
   return (
     <div className="space-y-8">
-      {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <MetricCard
-          label="Growth Trajectory"
-          value="Strong"
-          subtitle="Above national average"
-          change={{ value: 5.8, period: 'composite score' }}
-          trend="up"
-          status="good"
-          icon="📈"
-        />
-        <MetricCard
-          label="Innovation Index"
-          value="8.7/10"
-          subtitle="Top 5 globally"
-          change={{ value: 0.4, period: 'YoY' }}
-          trend="up"
-          status="good"
-          icon="💡"
-        />
-        <MetricCard
-          label="Livability Score"
-          value="92/100"
-          subtitle="Excellent"
-          change={{ value: 3, period: 'vs last year' }}
-          trend="up"
-          status="good"
-          icon="🏆"
-        />
-      </div>
-
-      {/* Comparative Analysis */}
-      <div className="card p-6">
-        <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
-          <span>📊</span>
-          Key Performance Indicators
-        </h3>
-        <div className="space-y-4">
-          {[
-            { category: 'Economic Performance', score: 88, rank: 'Top 10%', change: 'up' },
-            { category: 'Quality of Life', score: 92, rank: 'Top 5%', change: 'up' },
-            { category: 'Infrastructure', score: 85, rank: 'Top 15%', change: 'up' },
-            { category: 'Innovation & Technology', score: 91, rank: 'Top 8%', change: 'up' },
-            { category: 'Sustainability', score: 78, rank: 'Top 25%', change: 'up' },
-            { category: 'Cultural Richness', score: 95, rank: 'Top 3%', change: 'stable' },
-          ].map((kpi) => (
-            <div key={kpi.category} className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-text-primary font-medium">{kpi.category}</span>
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm text-text-secondary">{kpi.rank}</span>
-                    <span className="text-primary font-semibold w-12 text-right">{kpi.score}</span>
-                  </div>
-                </div>
-                <div className="h-2 bg-surface-border rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full rounded-full ${
-                      kpi.score >= 90 ? 'bg-success' : kpi.score >= 80 ? 'bg-primary' : 'bg-warning'
-                    }`}
-                    style={{ width: `${kpi.score}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
+      {/* Page Header */}
+      <div className="mb-8">
+        <div className="inline-block px-3 py-1 bg-accent/10 text-accent rounded-full text-sm font-medium mb-3">
+          Analytics Dashboard
         </div>
+        <h1 className="text-3xl md:text-4xl font-bold text-text-primary mb-2">
+          City Performance Metrics
+        </h1>
+        <p className="text-text-secondary text-lg">
+          Comprehensive analytics across environment, economy, and demographics
+        </p>
       </div>
 
-      {/* Charts */}
+      {/* Environmental Quality Section */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-text-primary mb-2 flex items-center gap-2">
+          🌤️ Environmental Quality
+        </h2>
+        <p className="text-text-secondary">Air quality index trends and historical data</p>
+      </div>
+      
+      <ChartCard
+        title="Air Quality Index (AQI) - 12 Month Trend"
+        description="Lower values indicate better air quality. Good: 0-50 | Moderate: 51-100"
+      >
+        <AQITrendChart data={aqiData} showBenchmark />
+      </ChartCard>
+
+      {/* Economic Indicators Section */}
+      <div className="mt-12 mb-6">
+        <h2 className="text-2xl font-bold text-text-primary mb-2 flex items-center gap-2">
+          💼 Economic Indicators
+        </h2>
+        <p className="text-text-secondary">Employment distribution and cost of living analysis</p>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ChartCard
-          title="Historical Trends"
-          description="Multi-year performance across key metrics (indexed to 100)"
+          title="Employment by Sector"
+          description="Current workforce distribution across major industries"
         >
-          <LineChart
-            data={growthTrendData}
-            xKey="year"
-            lines={[
-              { dataKey: 'gdp', name: 'GDP Growth', color: '#10b981', strokeWidth: 3 },
-              { dataKey: 'population', name: 'Population', color: '#6366f1', strokeWidth: 2 },
-              { dataKey: 'employment', name: 'Employment', color: '#f59e0b', strokeWidth: 2 },
-            ]}
-            yAxisLabel="Index Value"
-            height={280}
-          />
+          <JobSectorChart data={jobData} />
         </ChartCard>
 
         <ChartCard
-          title="Peer City Comparison"
-          description="Livability scores vs similar metropolitan areas"
+          title="Cost of Living Index"
+          description="Comparison to national average (100 = national average)"
         >
-          <BarChart
-            data={peerComparisonData}
-            xKey="city"
-            bars={[
-              { dataKey: 'score', name: 'Livability Score', color: '#8b5cf6' },
-            ]}
-            yAxisLabel="Score"
-            height={280}
-            customColors={['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981']}
-          />
+          <CostOfLivingChart data={costData} showNationalAverage />
         </ChartCard>
       </div>
 
-      {/* Predictions */}
-      <div className="card p-6">
-        <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
-          <span>🔮</span>
-          5-Year Projections
+      {/* Demographics Section */}
+      <div className="mt-12 mb-6">
+        <h2 className="text-2xl font-bold text-text-primary mb-2 flex items-center gap-2">
+          👥 Demographics
+        </h2>
+        <p className="text-text-secondary">Population growth trends and projections</p>
+      </div>
+
+      <ChartCard
+        title="Population Growth (10-Year Trend)"
+        description="Historical population in millions with year-over-year growth rates"
+      >
+        <PopulationChart data={populationData} />
+      </ChartCard>
+
+      {/* Data Insights Footer */}
+      <div className="mt-12 p-6 bg-surface-elevated rounded-lg border border-surface-border">
+        <h3 className="text-lg font-semibold text-text-primary mb-3 flex items-center gap-2">
+          <span>💡</span>
+          About This Data
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            { metric: 'Population', current: '8.3M', projected: '9.1M', growth: '+9.6%' },
-            { metric: 'GDP', current: '$715B', projected: '$892B', growth: '+24.8%' },
-            { metric: 'Employment', current: '4.2M', projected: '4.6M', growth: '+9.5%' },
-          ].map((proj) => (
-            <div key={proj.metric} className="p-4 bg-surface-elevated rounded-lg text-center">
-              <div className="text-text-tertiary text-sm mb-2">{proj.metric}</div>
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <span className="text-text-secondary">{proj.current}</span>
-                <span className="text-text-tertiary">→</span>
-                <span className="text-text-primary font-bold">{proj.projected}</span>
-              </div>
-              <div className="text-success text-sm font-medium">{proj.growth}</div>
-            </div>
-          ))}
+        <div className="space-y-2 text-sm text-text-secondary">
+          <p>
+            <strong className="text-text-primary">Data Sources:</strong> Charts display real-time analytics from 
+            environmental monitoring APIs, labor statistics, census data, and economic indices.
+          </p>
+          <p>
+            <strong className="text-text-primary">Update Frequency:</strong> Environmental data: Daily | 
+            Economic data: Monthly | Demographics: Quarterly
+          </p>
+          <p className="text-text-tertiary text-xs mt-4">
+            Note: Currently displaying mock data for demonstration. Production version will connect to live APIs.
+          </p>
         </div>
       </div>
     </div>
