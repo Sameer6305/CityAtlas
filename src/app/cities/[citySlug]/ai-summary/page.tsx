@@ -13,14 +13,14 @@ interface AISummaryPageProps {
 
 export default function AISummaryPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* AI Overview */}
-      <div className="card p-6 bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20">
+      <div className="glass-card p-5 bg-gradient-to-br from-cyan-500/10 to-purple-500/10 border-cyan-400/30">
         <div className="flex items-start gap-4">
           <div className="text-4xl">🤖</div>
           <div>
-            <h3 className="text-lg font-semibold text-text-primary mb-2">AI-Generated City Profile</h3>
-            <p className="text-text-secondary leading-relaxed">
+            <h3 className="text-lg font-semibold text-white mb-2">AI-Generated City Profile</h3>
+            <p className="text-white/80 leading-relaxed">
               This city demonstrates strong economic fundamentals with a thriving technology sector and robust job market. 
               The population shows steady growth with high quality of life indicators. Infrastructure investments are on track, 
               and sustainability initiatives are progressing well. The cultural scene is vibrant with world-class institutions. 
@@ -31,9 +31,9 @@ export default function AISummaryPage() {
       </div>
 
       {/* Key Insights */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="glass-card p-5">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <span>💪</span>
             Strengths
           </h3>
@@ -47,14 +47,14 @@ export default function AISummaryPage() {
             ].map((strength, i) => (
               <li key={i} className="flex items-start gap-3">
                 <span className="text-success text-xl flex-shrink-0">✓</span>
-                <span className="text-text-secondary">{strength}</span>
+                <span className="text-white/70">{strength}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
+        <div className="glass-card p-5">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <span>⚠️</span>
             Areas for Improvement
           </h3>
@@ -68,7 +68,7 @@ export default function AISummaryPage() {
             ].map((area, i) => (
               <li key={i} className="flex items-start gap-3">
                 <span className="text-warning text-xl flex-shrink-0">!</span>
-                <span className="text-text-secondary">{area}</span>
+                <span className="text-white/70">{area}</span>
               </li>
             ))}
           </ul>
@@ -76,8 +76,8 @@ export default function AISummaryPage() {
       </div>
 
       {/* Recommendations */}
-      <div className="card p-6">
-        <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
+      <div className="glass-card p-5">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
           <span>💡</span>
           AI Recommendations
         </h3>

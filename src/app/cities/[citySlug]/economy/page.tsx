@@ -23,9 +23,9 @@ const sectorColors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#6
 
 export default function EconomyPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           label="Unemployment Rate"
           value="3.8%"
@@ -61,7 +61,7 @@ export default function EconomyPage() {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <ChartCard
           title="Industry Distribution"
           description="Employment breakdown by sector"

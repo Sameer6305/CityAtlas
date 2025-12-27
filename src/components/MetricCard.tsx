@@ -67,30 +67,30 @@ export function MetricCard({
 
   if (loading) {
     return (
-      <div className="card p-6 animate-pulse">
-        <div className="h-4 bg-surface-elevated rounded w-1/2 mb-3" />
-        <div className="h-8 bg-surface-elevated rounded w-3/4 mb-2" />
-        <div className="h-3 bg-surface-elevated rounded w-1/3" />
+      <div className="glass-card p-5 animate-pulse">
+        <div className="h-3 bg-white/10 rounded w-1/2 mb-3" />
+        <div className="h-8 bg-white/10 rounded w-3/4 mb-2" />
+        <div className="h-3 bg-white/10 rounded w-1/3" />
       </div>
     );
   }
 
   return (
-    <div className="card p-6 hover:scale-[1.02] transition-transform">
+    <div className="glass-card p-5 hover:scale-[1.02] transition-smooth hover:shadow-lg hover:shadow-cyan-500/20 group">
       {/* Header with icon */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
-          <p className="text-sm text-text-tertiary font-medium">
+          <p className="text-sm text-white/60 font-medium">
             {label}
           </p>
           {subtitle && (
-            <p className="text-xs text-text-tertiary mt-1">
+            <p className="text-xs text-white/50 mt-1">
               {subtitle}
             </p>
           )}
         </div>
         {icon && (
-          <div className="text-2xl opacity-60">
+          <div className="text-2xl opacity-60 group-hover:scale-110 transition-smooth">
             {typeof icon === 'string' ? icon : icon}
           </div>
         )}
@@ -102,7 +102,7 @@ export function MetricCard({
           {value}
         </span>
         {unit && (
-          <span className="text-sm text-text-tertiary">
+          <span className="text-sm text-white/60">
             {unit}
           </span>
         )}
@@ -115,7 +115,7 @@ export function MetricCard({
           <span>
             {change.value > 0 ? '+' : ''}{change.value}%
           </span>
-          <span className="text-xs text-text-tertiary font-normal">
+          <span className="text-xs text-white/50 font-normal">
             {change.period}
           </span>
         </div>
@@ -123,12 +123,12 @@ export function MetricCard({
 
       {/* Mini trend line (visual indicator) */}
       {trend && (
-        <div className="mt-3 h-1 bg-surface-elevated rounded-full overflow-hidden">
+        <div className="mt-3 h-1 bg-white/10 rounded-full overflow-hidden">
           <div 
             className={`h-full rounded-full ${
               trend === 'up' ? 'bg-success' : 
               trend === 'down' ? 'bg-danger' : 
-              'bg-text-tertiary'
+              'bg-white/30'
             }`}
             style={{ width: '60%' }}
           />
@@ -156,7 +156,7 @@ export function MetricCardGrid({ children, columns = 4 }: MetricCardGridProps) {
   };
 
   return (
-    <div className={`grid ${gridCols[columns]} gap-6`}>
+    <div className={`grid ${gridCols[columns]} gap-4`}>
       {children}
     </div>
   );

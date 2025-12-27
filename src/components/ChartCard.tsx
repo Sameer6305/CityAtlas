@@ -33,15 +33,15 @@ export function ChartCard({
   const heightStyle = typeof height === 'number' ? `${height}px` : height;
 
   return (
-    <div className="card p-6">
+    <div className="glass-card p-5">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-text-primary mb-1">
+          <h3 className="text-lg font-semibold text-white mb-1">
             {title}
           </h3>
           {description && (
-            <p className="text-sm text-text-tertiary">
+            <p className="text-sm text-white/60">
               {description}
             </p>
           )}
@@ -55,14 +55,14 @@ export function ChartCard({
 
       {/* Chart Area */}
       <div 
-        className="relative bg-surface-elevated rounded-lg overflow-hidden"
+        className="relative bg-white/5 rounded-lg overflow-hidden border border-white/10"
         style={{ height: heightStyle }}
       >
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="flex flex-col items-center gap-3">
-              <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm text-text-tertiary">Loading data...</p>
+              <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-white/60">Loading data...</p>
             </div>
           </div>
         )}
@@ -71,8 +71,8 @@ export function ChartCard({
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center max-w-sm px-4">
               <div className="text-4xl mb-3">⚠️</div>
-              <p className="text-sm text-danger font-medium mb-1">Error loading chart</p>
-              <p className="text-xs text-text-tertiary">{error}</p>
+              <p className="text-sm text-red-400 font-medium mb-1">Error loading chart</p>
+              <p className="text-xs text-white/50">{error}</p>
             </div>
           </div>
         )}
@@ -86,7 +86,7 @@ export function ChartCard({
 
       {/* Footer */}
       {footer && (
-        <div className="mt-4 pt-4 border-t border-surface-border">
+        <div className="mt-4 pt-4 border-t border-white/10">
           {footer}
         </div>
       )}
@@ -110,7 +110,7 @@ export function ChartCardGrid({ children, columns = 2 }: ChartCardGridProps) {
     : 'grid-cols-1 lg:grid-cols-2';
 
   return (
-    <div className={`grid ${gridCols} gap-6`}>
+    <div className={`grid ${gridCols} gap-5`}>
       {children}
     </div>
   );
@@ -126,7 +126,7 @@ export function ChartPlaceholder({ message = 'Chart will render here' }: { messa
     <div className="w-full h-full flex items-center justify-center">
       <div className="text-center">
         <div className="text-6xl mb-4 opacity-20">📊</div>
-        <p className="text-text-tertiary text-sm">{message}</p>
+        <p className="text-white/50 text-sm">{message}</p>
       </div>
     </div>
   );

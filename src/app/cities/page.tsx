@@ -73,30 +73,30 @@ export default function CitiesPage() {
       <TopNav />
       
       {/* Hero Section */}
-      <div className="bg-gradient-to-br from-primary/20 via-accent/10 to-background border-b border-surface-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <div className="glass-card border-b border-white/10 mx-4 mt-4 rounded-2xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center">
-            <div className="inline-block px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-medium mb-6 animate-fade-in-up">
+            <div className="inline-block px-4 py-2 glass-card text-cyan-300 rounded-full text-xs font-medium mb-5 border border-cyan-400/30 animate-fade-in-up">
               City Directory
             </div>
-            <h1 className="text-5xl md:text-6xl font-bold text-text-primary mb-6 animate-fade-in-up delay-100">
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 animate-fade-in-up delay-100">
               Explore Cities
             </h1>
-            <p className="text-xl md:text-2xl text-text-secondary max-w-3xl mx-auto animate-fade-in-up delay-200">
+            <p className="text-lg md:text-xl text-white/70 max-w-3xl mx-auto animate-fade-in-up delay-200">
               Dive deep into city data, analytics, and insights across major metropolitan areas
             </p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">{/* Search Bar */}
-        <div className="mb-16">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-text-primary mb-2">Find Your City</h2>
-            <p className="text-text-secondary">Search from our database of world-class cities</p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">{/* Search Bar */}
+        <div className="mb-12">
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-bold text-white mb-2">Find Your City</h2>
+            <p className="text-white/70">Search from our database of world-class cities</p>
           </div>
           <div className="relative max-w-2xl mx-auto">{searchQuery && (
-              <div className="absolute -top-8 right-0 text-sm text-text-tertiary">
+              <div className="absolute -top-6 right-0 text-sm text-white/60">
                 {filteredCities.length} {filteredCities.length === 1 ? 'result' : 'results'}
               </div>
             )}
@@ -105,14 +105,14 @@ export default function CitiesPage() {
               placeholder="Search cities by name or country..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-surface text-text-primary placeholder:text-text-tertiary px-6 py-4 pl-12 rounded-xl outline-none border border-surface-border focus:border-primary transition-colors"
+              className="w-full glass-card text-white placeholder:text-white/50 px-6 py-4 pl-12 rounded-xl outline-none border border-white/10 focus:border-cyan-400 transition-smooth"
             />
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl">🔍</span>
           </div>
         </div>
 
         {/* Cities Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredCities.map((city, index) => (
             <Link
               key={city.slug}
@@ -120,32 +120,32 @@ export default function CitiesPage() {
               className="group animate-fade-in-up"
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              <div className="card p-6 hover:scale-105 transition-all duration-300 hover:shadow-glow-primary relative overflow-hidden">
+              <div className="glass-card p-6 hover:scale-105 transition-smooth hover:shadow-2xl hover:shadow-cyan-500/20 relative overflow-hidden rounded-2xl">
                 {/* Gradient Background */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${city.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
+                <div className={`absolute inset-0 bg-gradient-to-br ${city.gradient} opacity-0 group-hover:opacity-10 transition-smooth`} />
                 
                 {/* Content */}
                 <div className="relative z-10">
                   <div className="flex items-start justify-between mb-4">
                     <div className="text-4xl">{city.emoji}</div>
-                    <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-medium">
+                    <div className="bg-cyan-500/10 text-cyan-300 px-3 py-1 rounded-full text-xs font-medium border border-cyan-400/30">
                       {city.country}
                     </div>
                   </div>
                   
-                  <h3 className="text-xl font-bold text-text-primary mb-2 group-hover:text-primary transition-colors">
+                  <h3 className="text-xl font-bold text-white mb-2 group-hover:text-cyan-300 transition-smooth">
                     {city.name}
                   </h3>
                   
-                  <p className="text-sm text-text-secondary mb-4">
+                  <p className="text-sm text-white/70 mb-4">
                     {city.description}
                   </p>
                   
                   <div className="flex items-center justify-between text-sm">
-                    <div className="text-text-tertiary">
+                    <div className="text-white/60">
                       Pop: {(city.population / 1000000).toFixed(1)}M
                     </div>
-                    <div className="text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="text-cyan-400 opacity-0 group-hover:opacity-100 transition-smooth">
                       View Profile →
                     </div>
                   </div>
@@ -158,7 +158,7 @@ export default function CitiesPage() {
         {filteredCities.length === 0 && (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">🔍</div>
-            <p className="text-text-secondary">No cities found matching &ldquo;{searchQuery}&rdquo;</p>
+            <p className="text-white/70">No cities found matching &ldquo;{searchQuery}&rdquo;</p>
           </div>
         )}
       </div>

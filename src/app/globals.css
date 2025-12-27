@@ -5,6 +5,43 @@
 /* Import design system theme */
 @import '../styles/theme.css';
 
+/* Custom transition durations */
+@layer utilities {
+  .duration-2000 {
+    transition-duration: 2000ms;
+  }
+  
+  /* Glassmorphism utilities */
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+  
+  .glass-nav {
+    background: rgba(22, 24, 29, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--glass-border);
+  }
+  
+  /* Performance-optimized transitions */
+  .transition-fast {
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .transition-smooth {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Loading states */
+  .skeleton {
+    @apply animate-pulse bg-surface-elevated rounded;
+  }
+}
+
 /* Custom Animations */
 @keyframes plane {
   0% {

@@ -11,22 +11,28 @@
 
 :root {
   /* ========================================
-     COLOR PALETTE
+     COLOR PALETTE - Dark SaaS Theme
+     Inspired by: Linear, Vercel, Raycast
      ======================================== */
   
-  /* Background Colors - Deep blacks for true dark mode */
-  --color-background: #0a0a0f;           /* Main background - deep space black */
-  --color-surface: #141419;              /* Card/panel background - elevated surface */
-  --color-surface-elevated: #1a1a24;     /* Hover/active states - highest elevation */
-  --color-surface-border: #2a2a35;       /* Subtle borders - defines boundaries */
+  /* Background Colors - Deep navy/charcoal base */
+  --color-background: #0f1117;           /* Main background - deep charcoal */
+  --color-surface: #16181d;              /* Card/panel background - elevated surface */
+  --color-surface-elevated: #1c1f26;     /* Hover/active states - highest elevation */
+  --color-surface-border: #2d3139;       /* Subtle borders - defines boundaries */
   
-  /* Primary Brand Colors - Electric blue for CTAs and interactive elements */
-  --color-primary: #3b82f6;              /* Main brand color - sky blue */
-  --color-primary-hover: #2563eb;        /* Hover state - deeper blue */
-  --color-primary-muted: #1e3a8a;        /* Active/selected background - navy */
-  --color-primary-light: #60a5fa;        /* Lighter variant for highlights */
+  /* Glassmorphism Effects */
+  --glass-bg: rgba(22, 24, 29, 0.7);     /* Translucent surface */
+  --glass-border: rgba(255, 255, 255, 0.1); /* Subtle glass border */
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); /* Depth shadow */
   
-  /* Accent Colors - Purple for secondary highlights */
+  /* Primary Brand Colors - Soft cyan/blue for modern SaaS */
+  --color-primary: #06b6d4;              /* Main brand - cyan */
+  --color-primary-hover: #0891b2;        /* Hover state - deeper cyan */
+  --color-primary-muted: #164e63;        /* Active/selected background - dark cyan */
+  --color-primary-light: #22d3ee;        /* Lighter variant for highlights */
+  
+  /* Accent Colors - Purple/violet for contrast */
   --color-accent: #8b5cf6;               /* Accent color - vibrant purple */
   --color-accent-hover: #7c3aed;         /* Hover state */
   

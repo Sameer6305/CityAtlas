@@ -34,7 +34,7 @@ export function TabNavigation({ citySlug }: TabNavigationProps) {
   const activeSection = getActivePath();
 
   return (
-    <nav className="sticky top-16 z-40 bg-background border-b border-surface-border overflow-x-auto">
+    <nav className="sticky top-16 z-40 glass-nav border-b border-white/10 overflow-x-auto">
       <div className="container mx-auto px-6">
         <div className="flex gap-1">
           {CITY_SECTIONS.map((section) => {
@@ -50,10 +50,10 @@ export function TabNavigation({ citySlug }: TabNavigationProps) {
                 className={`
                   relative px-4 py-3 whitespace-nowrap
                   font-medium text-sm
-                  transition-all duration-200
+                  transition-fast
                   ${isActive
-                    ? 'text-primary border-b-2 border-primary'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated'
+                    ? 'text-cyan-400 border-b-2 border-cyan-400'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
                   }
                 `}
                 title={section.description}
@@ -62,7 +62,7 @@ export function TabNavigation({ citySlug }: TabNavigationProps) {
                 
                 {/* Active indicator */}
                 {isActive && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-cyan-400 shadow-lg shadow-cyan-400/50" />
                 )}
               </Link>
             );

@@ -15,9 +15,9 @@ interface CulturePageProps {
 
 export default function CulturePage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           label="Museums & Galleries"
           value="125"
@@ -45,9 +45,9 @@ export default function CulturePage() {
       </div>
 
       {/* Cultural Highlights */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="glass-card p-5">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <span>🎪</span>
             Major Annual Events
           </h3>
@@ -58,19 +58,19 @@ export default function CulturePage() {
               { name: 'Music & Culture Week', attendance: '350K visitors', period: 'March' },
               { name: 'Film & Media Festival', attendance: '200K visitors', period: 'November' },
             ].map((event) => (
-              <div key={event.name} className="flex items-center justify-between p-3 bg-surface-elevated rounded-lg">
+              <div key={event.name} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10">
                 <div>
-                  <div className="text-text-primary font-medium">{event.name}</div>
-                  <div className="text-sm text-text-tertiary">{event.period}</div>
+                  <div className="text-white font-medium">{event.name}</div>
+                  <div className="text-sm text-white/50">{event.period}</div>
                 </div>
-                <div className="text-sm text-text-secondary">{event.attendance}</div>
+                <div className="text-sm text-white/70">{event.attendance}</div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
+        <div className="glass-card p-5">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <span>🏛️</span>
             Notable Cultural Sites
           </h3>

@@ -33,32 +33,32 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 h-screen bg-surface border-r border-surface-border
+          fixed top-0 left-0 h-screen glass-nav
           transition-all duration-300 z-50
           ${collapsed ? 'w-16' : 'w-64'}
           lg:translate-x-0
         `}
       >
         {/* Logo & Toggle */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-surface-border">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-surface-border/50">
           {!collapsed && (
-            <Link href="/" className="flex items-center gap-2">
-              <span className="text-2xl">🏙️</span>
+            <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-fast">
+              <img src="/logo.png" alt="CityAtlas" className="h-10 w-auto rounded-lg" />
               <span className="text-lg font-bold text-text-primary">CityAtlas</span>
             </Link>
           )}
           {collapsed && (
             <button
               onClick={() => setCollapsed(false)}
-              className="w-full flex justify-center text-2xl"
+              className="w-full flex justify-center"
             >
-              🏙️
+              <img src="/logo.png" alt="CityAtlas" className="h-8 w-auto rounded-lg" />
             </button>
           )}
           {!collapsed && (
             <button
               onClick={() => setCollapsed(true)}
-              className="text-text-tertiary hover:text-text-primary transition-colors"
+              className="text-text-tertiary hover:text-text-primary transition-fast text-sm"
             >
               ◀
             </button>
@@ -66,7 +66,7 @@ export function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="p-4 space-y-2">
+        <nav className="p-3 space-y-1">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             
@@ -75,21 +75,21 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 className={`
-                  flex items-center gap-3 px-3 py-2 rounded-md
-                  transition-all duration-200
+                  flex items-center gap-3 px-3 py-2.5 rounded-lg
+                  transition-fast font-medium
                   ${isActive
-                    ? 'bg-primary text-white'
+                    ? 'bg-primary text-white shadow-lg shadow-primary/30'
                     : 'text-text-secondary hover:bg-surface-elevated hover:text-text-primary'
                   }
                   ${collapsed ? 'justify-center' : ''}
                 `}
               >
-                <span className="text-xl">{item.icon}</span>
+                <span className="text-lg">{item.icon}</span>
                 {!collapsed && (
-                  <span className="flex-1 font-medium">{item.label}</span>
+                  <span className="flex-1">{item.label}</span>
                 )}
                 {!collapsed && item.badge !== undefined && item.badge > 0 && (
-                  <span className="badge badge-info text-xs">
+                  <span className="px-2 py-0.5 bg-primary/20 text-primary rounded-full text-xs font-semibold">
                     {item.badge}
                   </span>
                 )}

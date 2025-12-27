@@ -1,6 +1,22 @@
 'use client';
 
-import { ReactNode, useEffect } from 'react';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}  );    </div>      </div>        </div>          <p className="text-text-secondary text-sm">Loading...</p>          <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />        <div className="glass-card rounded-2xl p-8 inline-block">      <div className="text-center">    <div className="min-h-screen flex items-center justify-center bg-background">  return (export default function Loading() { */ * Shown during page transitions for better perceived performanceimport { ReactNode, useEffect } from 'react';
 import { AppShell, TopNav, TabNavigation } from '@/components';
 import { useCityState } from '@/store/useAppStore';
 
@@ -47,28 +63,28 @@ export default function CityLayout({ children, params }: CityLayoutProps) {
     <AppShell>
       <TopNav />
       
-      {/* City Hero Section */}
-      <div className="bg-gradient-to-r from-primary/20 to-accent/20 border-b border-surface-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-sm text-text-tertiary mb-2 uppercase tracking-wide">
+      {/* City Hero Section with Glassmorphism */}
+      <div className="glass-card border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="text-xs text-text-tertiary mb-1.5 uppercase tracking-wider font-semibold">
             City Profile
           </div>
-          <h1 className="text-3xl font-bold text-text-primary">{cityName}</h1>
-          <p className="mt-2 text-text-secondary">
+          <h1 className="text-2xl md:text-3xl font-bold text-text-primary">{cityName}</h1>
+          <p className="mt-1.5 text-text-secondary text-sm">
             Comprehensive city intelligence and analytics
           </p>
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="sticky top-16 z-10 bg-surface/95 backdrop-blur-sm border-b border-surface-border">
+      {/* Tab Navigation with Glassmorphism */}
+      <div className="sticky top-16 z-10 glass-nav border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <TabNavigation citySlug={citySlug} />
         </div>
       </div>
 
       {/* Main Content Area */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {children}
       </main>
     </AppShell>

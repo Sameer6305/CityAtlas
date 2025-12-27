@@ -27,9 +27,9 @@ const aqiData = [
 
 export default function EnvironmentPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           label="Air Quality Index"
           value="45"
@@ -68,8 +68,8 @@ export default function EnvironmentPage() {
       </div>
 
       {/* Sustainability Initiatives */}
-      <div className="card p-6">
-        <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
+      <div className="glass-card p-5">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
           <span>🌱</span>
           Active Sustainability Programs
         </h3>

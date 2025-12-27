@@ -15,9 +15,9 @@ interface EducationPageProps {
 
 export default function EducationPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           label="Literacy Rate"
           value="98.5%"
@@ -52,26 +52,26 @@ export default function EducationPage() {
       </div>
 
       {/* Top Universities */}
-      <div className="card p-6">
-        <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
+      <div className="glass-card p-5">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
           <span>🏛️</span>
           Top Universities
         </h3>
-        <div className="space-y-4">
+        <div className="space-y-3">
           {[
             { name: 'City Technical University', ranking: 'Top 50 Global', students: '45K', research: 'High' },
             { name: 'Metropolitan State University', ranking: 'Top 100 Global', students: '38K', research: 'High' },
             { name: 'Downtown Business School', ranking: 'Top 20 Business', students: '12K', research: 'Medium' },
             { name: 'City Medical College', ranking: 'Top 30 Medical', students: '8K', research: 'High' },
           ].map((uni) => (
-            <div key={uni.name} className="flex items-center justify-between p-4 bg-surface-elevated rounded-lg hover:bg-surface-border transition-colors">
+            <div key={uni.name} className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-smooth">
               <div>
-                <div className="text-text-primary font-medium mb-1">{uni.name}</div>
-                <div className="text-sm text-text-secondary">{uni.ranking}</div>
+                <div className="text-white font-medium mb-1">{uni.name}</div>
+                <div className="text-sm text-white/60">{uni.ranking}</div>
               </div>
               <div className="text-right">
-                <div className="text-text-primary text-sm">{uni.students} students</div>
-                <div className="text-xs text-text-tertiary">Research: {uni.research}</div>
+                <div className="text-white text-sm">{uni.students} students</div>
+                <div className="text-xs text-white/50">Research: {uni.research}</div>
               </div>
             </div>
           ))}

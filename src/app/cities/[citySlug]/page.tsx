@@ -36,22 +36,22 @@ const costColors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'];
 
 export default function CityOverviewPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Page Header */}
-      <div className="mb-8">
-        <div className="inline-block px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium mb-3">
+      <div className="mb-6">
+        <div className="inline-block px-3 py-1 glass-card text-primary rounded-full text-xs font-semibold mb-2">
           City Overview
         </div>
-        <h1 className="text-3xl md:text-4xl font-bold text-text-primary mb-2">
+        <h1 className="text-2xl md:text-3xl font-bold text-text-primary mb-2">
           Key Metrics & Highlights
         </h1>
-        <p className="text-text-secondary text-lg">
+        <p className="text-text-secondary">
           High-level overview of city performance and characteristics
         </p>
       </div>
 
       {/* Quick Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           label="Population"
           value="8.3M"
@@ -83,11 +83,11 @@ export default function CityOverviewPage() {
       </div>
 
       {/* Charts Section */}
-      <div className="mb-4">
-        <h2 className="text-2xl font-bold text-text-primary mb-2">📊 Trends & Analytics</h2>
-        <p className="text-text-secondary">Historical data and growth patterns</p>
+      <div className="mb-3">
+        <h2 className="text-xl font-bold text-text-primary mb-1">📊 Trends & Analytics</h2>
+        <p className="text-text-secondary text-sm">Historical data and growth patterns</p>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <ChartCard
           title="Population Growth Trend"
           description="Historical population data over the last 9 years (in millions)"
@@ -121,12 +121,12 @@ export default function CityOverviewPage() {
       </div>
 
       {/* City Highlights */}
-      <div className="mb-4">
-        <h2 className="text-2xl font-bold text-text-primary mb-2">🎯 Strengths & Challenges</h2>
-        <p className="text-text-secondary">Key advantages and areas for improvement</p>
+      <div className="mb-3">
+        <h2 className="text-xl font-bold text-text-primary mb-1">🎯 Strengths & Challenges</h2>
+        <p className="text-text-secondary text-sm">Key advantages and areas for improvement</p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="card p-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="glass-card p-5 rounded-xl">
           <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
             <span>🏙️</span>
             City Highlights

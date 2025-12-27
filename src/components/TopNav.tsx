@@ -58,18 +58,22 @@ export function TopNav({ title, subtitle, showSearch = true }: TopNavProps) {
   };
 
   return (
-    <header className="sticky top-0 z-sticky bg-background/95 backdrop-blur-md border-b border-surface-border">
-      <div className="container mx-auto px-6 py-4">
+    <header className="sticky top-0 z-sticky glass-nav">
+      <div className="container mx-auto px-6 py-3">
         <div className="flex items-center justify-between gap-4">
-          {/* Title Section */}
-          <div className="flex-1">
+          {/* Logo and Title Section */}
+          <div className="flex-1 flex items-center gap-3">
+            <button onClick={() => router.push('/')} className="hover:opacity-80 transition-fast flex items-center gap-3">
+              <img src="/logo.png" alt="CityAtlas" className="h-12 w-auto rounded-lg" />
+              <span className="text-xl font-bold text-text-primary hidden sm:block">CityAtlas</span>
+            </button>
             {title && (
-              <div>
-                <h1 className="text-2xl font-bold text-text-primary">
+              <div className="ml-4">
+                <h1 className="text-xl font-bold text-text-primary">
                   {title}
                 </h1>
                 {subtitle && (
-                  <p className="text-sm text-text-tertiary mt-1">
+                  <p className="text-xs text-text-tertiary mt-0.5">
                     {subtitle}
                   </p>
                 )}
@@ -89,10 +93,10 @@ export function TopNav({ title, subtitle, showSearch = true }: TopNavProps) {
                   placeholder="Search cities..."
                   className="
                     w-full px-4 py-2 pl-10
-                    bg-surface border border-surface-border rounded-md
+                    glass-card rounded-lg
                     text-text-primary placeholder:text-text-tertiary
-                    focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20
-                    transition-all
+                    focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20
+                    transition-fast
                   "
                 />
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary">

@@ -10,14 +10,19 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "CityAtlas - City Intelligence Platform",
+  title: "CityAtlas - Intelligence in Urban Flow",
   description: "Dark-themed, event-driven city intelligence platform presenting cities as structured resumes with real-time data and AI insights",
   keywords: ["city data", "analytics", "city intelligence", "urban planning", "city comparison"],
   authors: [{ name: "CityAtlas" }],
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
   openGraph: {
-    title: "CityAtlas - City Intelligence Platform",
+    title: "CityAtlas - Intelligence in Urban Flow",
     description: "Explore cities as structured resumes with real-time data and AI insights",
     type: "website",
+    images: ["/logo.png"],
   },
 };
 
@@ -28,7 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${inter.className} bg-background text-text-primary min-h-screen`}>
         {/* Theme Provider - Manages dark/light mode state */}
         <ThemeProvider>
           {children}

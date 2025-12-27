@@ -29,26 +29,26 @@ export default function AnalyticsPage() {
   const populationData = getPopulationData();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Page Header */}
-      <div className="mb-8">
-        <div className="inline-block px-3 py-1 bg-accent/10 text-accent rounded-full text-sm font-medium mb-3">
+      <div className="mb-6">
+        <div className="inline-block px-3 py-1 glass-card text-cyan-300 rounded-full text-xs font-medium mb-3 border border-cyan-400/30">
           Analytics Dashboard
         </div>
-        <h1 className="text-3xl md:text-4xl font-bold text-text-primary mb-2">
+        <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
           City Performance Metrics
         </h1>
-        <p className="text-text-secondary text-lg">
+        <p className="text-white/70 text-base">
           Comprehensive analytics across environment, economy, and demographics
         </p>
       </div>
 
       {/* Environmental Quality Section */}
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-text-primary mb-2 flex items-center gap-2">
+      <div className="mb-4">
+        <h2 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
           🌤️ Environmental Quality
         </h2>
-        <p className="text-text-secondary">Air quality index trends and historical data</p>
+        <p className="text-white/70">Air quality index trends and historical data</p>
       </div>
       
       <ChartCard
@@ -59,14 +59,14 @@ export default function AnalyticsPage() {
       </ChartCard>
 
       {/* Economic Indicators Section */}
-      <div className="mt-12 mb-6">
-        <h2 className="text-2xl font-bold text-text-primary mb-2 flex items-center gap-2">
+      <div className="mt-10 mb-4">
+        <h2 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
           💼 Economic Indicators
         </h2>
-        <p className="text-text-secondary">Employment distribution and cost of living analysis</p>
+        <p className="text-white/70">Employment distribution and cost of living analysis</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <ChartCard
           title="Employment by Sector"
           description="Current workforce distribution across major industries"

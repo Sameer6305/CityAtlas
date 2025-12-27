@@ -15,9 +15,9 @@ interface InfrastructurePageProps {
 
 export default function InfrastructurePage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           label="Public Transit Score"
           value="8.5/10"
@@ -53,26 +53,26 @@ export default function InfrastructurePage() {
       </div>
 
       {/* Transportation Overview */}
-      <div className="card p-6">
-        <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
+      <div className="glass-card p-5">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
           <span>🚊</span>
           Transportation Network
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center p-4 bg-surface-elevated rounded-lg">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="text-center p-4 bg-white/5 rounded-lg border border-white/10">
             <div className="text-3xl mb-2">🚇</div>
-            <div className="text-2xl font-bold text-text-primary mb-1">12</div>
-            <div className="text-sm text-text-secondary">Metro Lines</div>
+            <div className="text-2xl font-bold text-white mb-1">12</div>
+            <div className="text-sm text-white/60">Metro Lines</div>
           </div>
-          <div className="text-center p-4 bg-surface-elevated rounded-lg">
+          <div className="text-center p-4 bg-white/5 rounded-lg border border-white/10">
             <div className="text-3xl mb-2">🚌</div>
-            <div className="text-2xl font-bold text-text-primary mb-1">145</div>
-            <div className="text-sm text-text-secondary">Bus Routes</div>
+            <div className="text-2xl font-bold text-white mb-1">145</div>
+            <div className="text-sm text-white/60">Bus Routes</div>
           </div>
-          <div className="text-center p-4 bg-surface-elevated rounded-lg">
+          <div className="text-center p-4 bg-white/5 rounded-lg border border-white/10">
             <div className="text-3xl mb-2">🚴</div>
-            <div className="text-2xl font-bold text-text-primary mb-1">320</div>
-            <div className="text-sm text-text-secondary">Bike Stations</div>
+            <div className="text-2xl font-bold text-white mb-1">320</div>
+            <div className="text-sm text-white/60">Bike Stations</div>
           </div>
         </div>
       </div>
