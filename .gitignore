@@ -27,6 +27,11 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.env.local
+.env
+
+# backend secrets
+backend/src/main/resources/application-secrets.properties
 
 # vercel
 .vercel

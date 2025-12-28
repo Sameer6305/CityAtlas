@@ -1,7 +1,9 @@
 package com.cityatlas.backend.exception;
 
-import com.cityatlas.backend.dto.response.ErrorResponse;
-import jakarta.servlet.http.HttpServletRequest;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -10,9 +12,10 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import com.cityatlas.backend.dto.response.ErrorResponse;
+
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Global Exception Handler
@@ -28,6 +31,7 @@ import java.util.List;
  * - ApiException (custom status)
  * - Generic Exception (500)
  */
+@Slf4j
 @ControllerAdvice
 public class GlobalExceptionHandler {
     
@@ -179,8 +183,7 @@ public class GlobalExceptionHandler {
             HttpServletRequest request) {
         
         // Log the exception for debugging
-        System.err.println("Unhandled exception occurred:");
-        ex.printStackTrace();
+        log.error("Unhandled exception occurred", ex);
         
         // Don't expose internal error details to client in production
         String message = "An unexpected error occurred. Please try again later.";
