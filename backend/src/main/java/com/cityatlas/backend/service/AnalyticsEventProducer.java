@@ -1,14 +1,17 @@
 package com.cityatlas.backend.service;
 
-import com.cityatlas.backend.config.KafkaTopics;
-import com.cityatlas.backend.dto.event.AnalyticsEventPayload;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.concurrent.CompletableFuture;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
 
-import java.util.concurrent.CompletableFuture;
+import com.cityatlas.backend.config.KafkaTopics;
+import com.cityatlas.backend.dto.event.AnalyticsEventPayload;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Analytics Event Producer Service
@@ -37,6 +40,7 @@ import java.util.concurrent.CompletableFuture;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(name = "kafka.enabled", havingValue = "true", matchIfMissing = false)
 public class AnalyticsEventProducer {
     
     /**

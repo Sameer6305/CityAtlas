@@ -97,13 +97,13 @@ public class City {
     /**
      * Geographic coordinates - Latitude
      */
-    @Column(precision = 10, scale = 7)
+    @Column(name = "latitude")
     private Double latitude;
     
     /**
      * Geographic coordinates - Longitude
      */
-    @Column(precision = 10, scale = 7)
+    @Column(name = "longitude")
     private Double longitude;
     
     /**

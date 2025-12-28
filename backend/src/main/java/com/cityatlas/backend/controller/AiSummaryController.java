@@ -1,15 +1,21 @@
 package com.cityatlas.backend.controller;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.cityatlas.backend.dto.response.AiCitySummaryDTO;
 import com.cityatlas.backend.entity.City;
 import com.cityatlas.backend.exception.ResourceNotFoundException;
 import com.cityatlas.backend.repository.CityRepository;
 import com.cityatlas.backend.service.AiCitySummaryService;
-import com.cityatlas.backend.service.AirQualityService;
+import com.cityatlas.backend.service.external.AirQualityService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
 /**
  * REST API Controller for AI City Summary
@@ -93,7 +99,11 @@ public class AiSummaryController {
         // The AI service will still generate a summary without environmental insights
         Integer currentAqi = null;
         try {
-            currentAqi = airQualityService.getCurrentAQI(city.getLatitude(), city.getLongitude())
+            currentAqi = airQualityService.fetchAirQualityByCoordinates(
+                    city.getLatitude(), 
+                    city.getLongitude(), 
+                    25) // 25km radius
+                    .map(aqDto -> aqDto.getAqi())
                     .block(); // Block to convert Mono to synchronous value
             log.debug("Retrieved AQI for {}: {}", citySlug, currentAqi);
         } catch (Exception e) {

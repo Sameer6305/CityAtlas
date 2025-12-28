@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,7 +20,6 @@ import com.cityatlas.backend.dto.response.AnalyticsResponse.JobSectorData;
 import com.cityatlas.backend.dto.response.AnalyticsResponse.PopulationDataPoint;
 import com.cityatlas.backend.service.AnalyticsEventProducer;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -41,15 +41,15 @@ import lombok.extern.slf4j.Slf4j;
  */
 @RestController
 @RequestMapping("/api/cities/{slug}/analytics")
-@RequiredArgsConstructor
 @Slf4j
 public class AnalyticsController {
     
     /**
-     * Analytics event producer for Kafka integration
-     * Used to publish user behavior events asynchronously
+     * Analytics event producer for Kafka integration (Optional)
+     * Used to publish user behavior events asynchronously when Kafka is enabled
      */
-    private final AnalyticsEventProducer analyticsEventProducer;
+    @Autowired(required = false)
+    private AnalyticsEventProducer analyticsEventProducer;
     
     /**
      * Get Comprehensive Analytics for a City
@@ -119,9 +119,13 @@ public class AnalyticsController {
                     .build();
             
             // Async publishing - returns CompletableFuture but we don't wait
-            analyticsEventProducer.publishSectionViewed(event);
-            
-            log.debug("SECTION_VIEWED event published for citySlug: {}, section: analytics", slug);
+            // Only publish if Kafka is enabled (analyticsEventProducer is available)
+            if (analyticsEventProducer != null) {
+                analyticsEventProducer.publishSectionViewed(event);
+                log.debug("SECTION_VIEWED event published for citySlug: {}, section: analytics", slug);
+            } else {
+                log.trace("Kafka disabled - skipping SECTION_VIEWED event for citySlug: {}", slug);
+            }
             
         } catch (Exception ex) {
             // Log error but don't fail the API request

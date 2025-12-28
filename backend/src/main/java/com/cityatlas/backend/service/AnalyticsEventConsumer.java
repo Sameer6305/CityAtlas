@@ -1,14 +1,17 @@
 package com.cityatlas.backend.service;
 
-import com.cityatlas.backend.config.KafkaTopics;
-import com.cityatlas.backend.dto.event.AnalyticsEventPayload;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
+
+import com.cityatlas.backend.config.KafkaTopics;
+import com.cityatlas.backend.dto.event.AnalyticsEventPayload;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Analytics Event Consumer Service
@@ -40,6 +43,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(name = "kafka.enabled", havingValue = "true", matchIfMissing = false)
 public class AnalyticsEventConsumer {
     
     /**
