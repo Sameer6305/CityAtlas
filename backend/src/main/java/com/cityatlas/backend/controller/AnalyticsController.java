@@ -40,7 +40,7 @@ import lombok.extern.slf4j.Slf4j;
  * TODO: Connect to AnalyticsService for database operations
  */
 @RestController
-@RequestMapping("/api/cities/{slug}/analytics")
+@RequestMapping("/cities/{slug}/analytics")
 @Slf4j
 public class AnalyticsController {
     

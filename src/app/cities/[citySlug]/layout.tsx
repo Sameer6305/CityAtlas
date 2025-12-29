@@ -1,22 +1,6 @@
 'use client';
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-}  );    </div>      </div>        </div>          <p className="text-text-secondary text-sm">Loading...</p>          <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />        <div className="glass-card rounded-2xl p-8 inline-block">      <div className="text-center">    <div className="min-h-screen flex items-center justify-center bg-background">  return (export default function Loading() { */ * Shown during page transitions for better perceived performanceimport { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { AppShell, TopNav, TabNavigation } from '@/components';
 import { useCityState } from '@/store/useAppStore';
 

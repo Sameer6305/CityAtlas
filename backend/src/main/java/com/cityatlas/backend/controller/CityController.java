@@ -33,7 +33,7 @@ import lombok.extern.slf4j.Slf4j;
  * TODO: Connect to CityService for database operations
  */
 @RestController
-@RequestMapping("/api/cities")
+@RequestMapping("/cities")
 @Slf4j
 public class CityController {
     

@@ -37,7 +37,7 @@ import lombok.extern.slf4j.Slf4j;
  * @see AiCitySummaryDTO
  */
 @RestController
-@RequestMapping("/api/ai")
+@RequestMapping("/ai")
 @RequiredArgsConstructor
 @Slf4j
 @CrossOrigin(origins = "*") // Allow frontend access from any origin
