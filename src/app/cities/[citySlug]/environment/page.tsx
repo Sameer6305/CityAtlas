@@ -2,12 +2,14 @@
  * Environment Section Page
  * Route: /cities/[citySlug]/environment
  * 
+ * Premium glassmorphism design with smooth animations
  * Displays air quality, green space, sustainability, climate risk
  */
 
 'use client';
 
-import { MetricCard, ChartCard, LineChart } from '@/components';
+import { useState, useEffect } from 'react';
+import { LineChart, AreaChart } from '@/components';
 
 // Sample AQI data
 const aqiData = [
@@ -25,109 +27,301 @@ const aqiData = [
   { month: 'Dec', aqi: 45, benchmark: 50 },
 ];
 
-export default function EnvironmentPage() {
+// Energy mix data
+const energyData = [
+  { year: '2020', renewable: 25, fossil: 75 },
+  { year: '2021', renewable: 28, fossil: 72 },
+  { year: '2022', renewable: 32, fossil: 68 },
+  { year: '2023', renewable: 35, fossil: 65 },
+  { year: '2024', renewable: 42, fossil: 58 },
+];
+
+// Glassmorphism card component
+function GlassCard({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+  const [isVisible, setIsVisible] = useState(false);
+  
+  useEffect(() => {
+    const timer = setTimeout(() => setIsVisible(true), delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
+
   return (
-    <div className="space-y-6">
+    <div className={`backdrop-blur-xl bg-white/[0.03] border border-white/10 rounded-2xl transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+// Metric display component
+function MetricDisplay({ 
+  label, 
+  value, 
+  subtitle,
+  icon, 
+  trend, 
+  trendValue,
+  iconBg = 'from-cyan-500/20 to-blue-500/20',
+  delay = 0
+}: { 
+  label: string; 
+  value: string; 
+  subtitle?: string;
+  icon: React.ReactNode;
+  trend?: 'up' | 'down';
+  trendValue?: string;
+  iconBg?: string;
+  delay?: number;
+}) {
+  return (
+    <GlassCard className="p-5 hover:bg-white/[0.05] hover:scale-[1.02] transition-all duration-500 group" delay={delay}>
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-white/50 text-sm font-medium mb-1">{label}</p>
+          <p className="text-3xl font-bold text-white">{value}</p>
+          {subtitle && <p className="text-white/40 text-sm mt-1">{subtitle}</p>}
+          {trend && trendValue && (
+            <div className={`flex items-center gap-1 mt-2 text-sm ${trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-emerald-400' : 'text-red-400'}`}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                  d={trend === 'up' ? "M5 10l7-7m0 0l7 7m-7-7v18" : "M19 14l-7 7m0 0l-7-7m7 7V3"} 
+                />
+              </svg>
+              <span>{trendValue}</span>
+            </div>
+          )}
+        </div>
+        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${iconBg} flex items-center justify-center group-hover:scale-110 transition-transform duration-500`}>
+          {icon}
+        </div>
+      </div>
+    </GlassCard>
+  );
+}
+
+export default function EnvironmentPage() {
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoaded(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <div className={`space-y-6 transition-all duration-700 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
+      
       {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard
+        <MetricDisplay
           label="Air Quality Index"
           value="45"
           subtitle="Good"
-          change={{ value: -8, period: 'vs last month' }}
           trend="down"
-          status="good"
-          icon="🌤️"
+          trendValue="-8 vs last month"
+          iconBg="from-emerald-500/20 to-teal-500/20"
+          delay={100}
+          icon={
+            <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+            </svg>
+          }
         />
-        <MetricCard
+        <MetricDisplay
           label="Green Space"
           value="28%"
           subtitle="2,800 hectares"
-          change={{ value: 3.5, period: 'vs last year' }}
           trend="up"
-          status="good"
-          icon="🌳"
+          trendValue="+3.5% vs last year"
+          iconBg="from-green-500/20 to-emerald-500/20"
+          delay={200}
+          icon={
+            <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+            </svg>
+          }
         />
-        <MetricCard
+        <MetricDisplay
           label="Recycling Rate"
           value="62%"
-          change={{ value: 7.2, period: 'YoY' }}
           trend="up"
-          status="good"
-          icon="♻️"
+          trendValue="+7.2% YoY"
+          iconBg="from-cyan-500/20 to-blue-500/20"
+          delay={300}
+          icon={
+            <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          }
         />
-        <MetricCard
+        <MetricDisplay
           label="Renewable Energy"
           value="35%"
           subtitle="Of total consumption"
-          change={{ value: 12, period: 'YoY' }}
           trend="up"
-          status="good"
-          icon="⚡"
+          trendValue="+12% YoY"
+          iconBg="from-amber-500/20 to-orange-500/20"
+          delay={400}
+          icon={
+            <svg className="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          }
         />
       </div>
 
+      {/* Air Quality Chart */}
+      <GlassCard className="p-6" delay={500}>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-lg font-semibold text-white">Air Quality Trends</h3>
+            <p className="text-white/50 text-sm">AQI measurements over the past 12 months</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-emerald-400"></span>
+              <span className="text-white/60 text-sm">AQI</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-indigo-400"></span>
+              <span className="text-white/60 text-sm">Target</span>
+            </div>
+          </div>
+        </div>
+        <LineChart
+          data={aqiData}
+          xKey="month"
+          lines={[
+            { dataKey: 'aqi', name: 'AQI', color: '#10b981', strokeWidth: 3 },
+            { dataKey: 'benchmark', name: 'Target (Good)', color: '#6366f1', strokeWidth: 2 },
+          ]}
+          height={280}
+        />
+      </GlassCard>
+
       {/* Sustainability Initiatives */}
-      <div className="glass-card p-5">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <span>🌱</span>
+      <GlassCard className="p-6" delay={600}>
+        <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center">
+            <span className="text-xl">🌱</span>
+          </div>
           Active Sustainability Programs
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
-            { title: 'Carbon Neutral 2030', progress: 68, description: 'City-wide emissions reduction initiative' },
-            { title: 'Urban Greening Project', progress: 82, description: 'Expanding parks and green corridors' },
-            { title: 'Clean Energy Transition', progress: 45, description: 'Converting to renewable sources' },
-            { title: 'Zero Waste Program', progress: 58, description: 'Municipal waste reduction target' },
-          ].map((program) => (
-            <div key={program.title} className="p-4 bg-surface-elevated rounded-lg">
+            { title: 'Carbon Neutral 2030', progress: 68, description: 'City-wide emissions reduction initiative', color: '#10b981' },
+            { title: 'Urban Greening Project', progress: 82, description: 'Expanding parks and green corridors', color: '#22c55e' },
+            { title: 'Clean Energy Transition', progress: 45, description: 'Converting to renewable sources', color: '#f59e0b' },
+            { title: 'Zero Waste Program', progress: 58, description: 'Municipal waste reduction target', color: '#06b6d4' },
+          ].map((program, index) => (
+            <div key={program.title} className="p-5 bg-white/[0.02] rounded-xl border border-white/5 hover:bg-white/[0.05] transition-all duration-300">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-text-primary font-medium">{program.title}</span>
-                <span className="text-primary font-semibold">{program.progress}%</span>
+                <span className="text-white font-medium">{program.title}</span>
+                <span className="text-white font-semibold" style={{ color: program.color }}>{program.progress}%</span>
               </div>
-              <p className="text-sm text-text-secondary mb-3">{program.description}</p>
-              <div className="h-2 bg-surface-border rounded-full overflow-hidden">
+              <p className="text-sm text-white/50 mb-4">{program.description}</p>
+              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-success rounded-full"
-                  style={{ width: `${program.progress}%` }}
+                  className="h-full rounded-full transition-all duration-1000"
+                  style={{ 
+                    width: `${program.progress}%`, 
+                    backgroundColor: program.color,
+                    transitionDelay: `${index * 150}ms`
+                  }}
                 />
               </div>
             </div>
           ))}
         </div>
-      </div>
+      </GlassCard>
 
-      {/* Charts */}
+      {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard
-          title="Air Quality Trends"
-          description="AQI measurements over the past 12 months"
-        >
-          <LineChart
-            data={aqiData}
-            xKey="month"
-            lines={[
-              { dataKey: 'aqi', name: 'AQI', color: '#10b981', strokeWidth: 3 },
-              { dataKey: 'benchmark', name: 'Target (Good)', color: '#6366f1', strokeWidth: 2 },
-            ]}
-            yAxisLabel="AQI Value"
-            height={280}
-          />
-        </ChartCard>
-
-        <ChartCard
-          title="Energy Mix"
-          description="Renewable vs traditional energy sources"
-        >
-          <div className="h-64 flex items-center justify-center text-text-tertiary">
-            <div className="text-center">
-              <div className="text-5xl mb-4">⚡</div>
-              <p>Energy distribution chart</p>
-              <p className="text-sm mt-2">Chart integration pending</p>
-            </div>
+        <GlassCard className="p-6" delay={700}>
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-white">Energy Mix Transition</h3>
+            <p className="text-white/50 text-sm">Renewable vs fossil fuel sources</p>
           </div>
-        </ChartCard>
+          <AreaChart
+            data={energyData}
+            xKey="year"
+            areas={[
+              { dataKey: 'renewable', name: 'Renewable', color: '#10b981', fillOpacity: 0.4 },
+              { dataKey: 'fossil', name: 'Fossil Fuels', color: '#6b7280', fillOpacity: 0.2 },
+            ]}
+            height={260}
+          />
+        </GlassCard>
+
+        <GlassCard className="p-6" delay={800}>
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-white">Green Initiatives</h3>
+            <p className="text-white/50 text-sm">Environmental investments</p>
+          </div>
+          <div className="space-y-4 mt-6">
+            {[
+              { name: 'Electric Bus Fleet', invested: '$450M', units: '850 buses', progress: 72 },
+              { name: 'Solar Panel Installations', invested: '$280M', units: '15K homes', progress: 58 },
+              { name: 'EV Charging Network', invested: '$120M', units: '2.5K stations', progress: 45 },
+              { name: 'Urban Forest Initiative', invested: '$85M', units: '50K trees', progress: 88 },
+            ].map((item, index) => (
+              <div key={item.name} className="p-3 bg-white/[0.02] rounded-lg border border-white/5">
+                <div className="flex justify-between mb-2">
+                  <span className="text-white/80">{item.name}</span>
+                  <span className="text-emerald-400 text-sm">{item.invested}</span>
+                </div>
+                <div className="flex justify-between text-sm text-white/50 mb-2">
+                  <span>{item.units}</span>
+                  <span>{item.progress}% complete</span>
+                </div>
+                <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-green-400 transition-all duration-1000"
+                    style={{ width: `${item.progress}%`, transitionDelay: `${index * 100}ms` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
       </div>
+
+      {/* Climate Risk Assessment */}
+      <GlassCard className="p-6" delay={900}>
+        <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-red-500/20 flex items-center justify-center">
+            <span className="text-xl">🌡️</span>
+          </div>
+          Climate Risk Assessment
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { risk: 'Flooding', level: 'Moderate', score: 45, color: '#f59e0b' },
+            { risk: 'Heat Waves', level: 'High', score: 72, color: '#ef4444' },
+            { risk: 'Sea Level Rise', level: 'Low', score: 28, color: '#10b981' },
+            { risk: 'Air Pollution', level: 'Moderate', score: 55, color: '#f59e0b' },
+          ].map((item) => (
+            <div key={item.risk} className="p-5 bg-white/[0.02] rounded-xl border border-white/5 text-center">
+              <div className="text-white font-medium mb-3">{item.risk}</div>
+              <div className="relative w-16 h-16 mx-auto mb-3">
+                <svg className="w-full h-full transform -rotate-90">
+                  <circle cx="32" cy="32" r="28" stroke="rgba(255,255,255,0.1)" strokeWidth="4" fill="none" />
+                  <circle 
+                    cx="32" cy="32" r="28" 
+                    stroke={item.color}
+                    strokeWidth="4" 
+                    fill="none" 
+                    strokeLinecap="round"
+                    strokeDasharray={`${item.score * 1.76} 176`}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-xl font-bold text-white">{item.score}</span>
+                </div>
+              </div>
+              <div className="text-sm font-medium" style={{ color: item.color }}>{item.level}</div>
+            </div>
+          ))}
+        </div>
+      </GlassCard>
     </div>
   );
 }

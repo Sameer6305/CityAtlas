@@ -33,7 +33,7 @@ export default function CitiesPage() {
       population: 815201,
       description: 'Tech innovation hub with iconic landmarks',
       gradient: 'from-blue-500 to-cyan-500',
-      emoji: '🌉'
+      accentColor: '#06b6d4'
     },
     { 
       name: 'Austin', 
@@ -42,7 +42,7 @@ export default function CitiesPage() {
       population: 964254,
       description: 'Live music capital and startup ecosystem',
       gradient: 'from-purple-500 to-pink-500',
-      emoji: '🎸'
+      accentColor: '#a855f7'
     },
     { 
       name: 'Seattle', 
@@ -51,7 +51,7 @@ export default function CitiesPage() {
       population: 749256,
       description: 'Emerald city with thriving tech scene',
       gradient: 'from-green-500 to-teal-500',
-      emoji: '🌲'
+      accentColor: '#10b981'
     },
     { 
       name: 'New York', 
@@ -60,7 +60,7 @@ export default function CitiesPage() {
       population: 8336817,
       description: 'The city that never sleeps',
       gradient: 'from-yellow-500 to-orange-500',
-      emoji: '🗽'
+      accentColor: '#f59e0b'
     },
     { 
       name: 'Boston', 
@@ -69,7 +69,7 @@ export default function CitiesPage() {
       population: 675647,
       description: 'Historical hub of education and innovation',
       gradient: 'from-red-500 to-orange-500',
-      emoji: '🎓'
+      accentColor: '#ef4444'
     },
   ];
 
@@ -255,32 +255,45 @@ export default function CitiesPage() {
                   href={`/cities/${city.slug}`}
                   className="group"
                 >
-                  <div className="backdrop-blur-md bg-white/[0.03] border border-white/10 p-6 hover:bg-white/[0.06] hover:border-white/20 transition-all duration-500 rounded-2xl hover:scale-105 hover:-translate-y-1 hover:shadow-xl hover:shadow-cyan-500/10 relative overflow-hidden">
+                  <div className="backdrop-blur-md bg-white/[0.03] border border-white/10 p-6 hover:bg-white/[0.06] hover:border-white/20 transition-all duration-500 rounded-2xl hover:scale-[1.03] hover:-translate-y-2 hover:shadow-2xl hover:shadow-cyan-500/20 relative overflow-hidden group">
                     {/* Gradient Background on Hover */}
-                    <div className={`absolute inset-0 bg-gradient-to-br ${city.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
+                    <div className={`absolute inset-0 bg-gradient-to-br ${city.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-700`} />
+                    {/* Subtle corner glow */}
+                    <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" style={{ background: `radial-gradient(circle, ${city.accentColor}20 0%, transparent 70%)` }} />
                     
                     {/* Content */}
                     <div className="relative z-10">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="text-5xl group-hover:scale-110 transition-transform duration-500">{city.emoji}</div>
-                        <button className="p-1 rounded-lg hover:bg-white/10 transition-colors">
-                          <svg className="w-5 h-5 text-white/40 hover:text-white/80" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                      <div className="flex items-start justify-between mb-5">
+                        {/* City Initial Badge */}
+                        <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${city.gradient} flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:shadow-xl transition-all duration-500`}>
+                          <span className="text-2xl font-bold text-white">{city.name.charAt(0)}</span>
+                        </div>
+                        <button className="p-2 rounded-lg hover:bg-white/10 transition-colors opacity-0 group-hover:opacity-100">
+                          <svg className="w-5 h-5 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                           </svg>
                         </button>
                       </div>
                       
-                      <h3 className="text-xl font-bold text-white mb-2 group-hover:text-cyan-300 transition-colors duration-500">
+                      <h3 className="text-xl font-bold text-white mb-1 group-hover:text-cyan-300 transition-colors duration-500">
                         {city.name}
                       </h3>
                       
-                      <p className="text-sm text-white/60 mb-4">
-                        {city.country}
+                      <p className="text-sm text-white/50 mb-3">
+                        {city.description}
                       </p>
                       
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 backdrop-blur-sm bg-white/[0.05] border border-white/10 rounded-full text-sm">
-                        <div className="w-2 h-2 bg-cyan-400 rounded-full"></div>
-                        <span className="text-white/80">{city.country}</span>
+                      <div className="flex items-center justify-between">
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/[0.05] rounded-lg text-sm">
+                          <svg className="w-4 h-4 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          <span className="text-white/70">{city.country}</span>
+                        </div>
+                        <svg className="w-5 h-5 text-white/30 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
                       </div>
                     </div>
                   </div>
@@ -289,9 +302,14 @@ export default function CitiesPage() {
             </div>
 
             {filteredCities.length === 0 && (
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4">🔍</div>
-                <p className="text-white/70">No cities found matching &ldquo;{searchQuery}&rdquo;</p>
+              <div className="text-center py-16 backdrop-blur-xl bg-white/[0.02] border border-white/10 rounded-2xl">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white/[0.05] flex items-center justify-center">
+                  <svg className="w-8 h-8 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <p className="text-white/50 text-lg">No cities found matching</p>
+                <p className="text-white/70 font-medium">&ldquo;{searchQuery}&rdquo;</p>
               </div>
             )}
           </div>

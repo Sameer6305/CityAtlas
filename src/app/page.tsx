@@ -26,9 +26,22 @@ export default function Home() {
     } else {
       // Show and play video for first time in session
       setShowVideo(true);
-      if (videoRef.current) {
-        videoRef.current.play().catch(err => console.error('Video play error:', err));
-      }
+      
+      // Ensure video plays after a short delay to let element mount
+      const playTimer = setTimeout(() => {
+        if (videoRef.current) {
+          const playPromise = videoRef.current.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(err => {
+              console.error('Video play error:', err);
+              // If autoplay fails, try again
+              setTimeout(() => {
+                videoRef.current?.play().catch(e => console.error('Retry failed:', e));
+              }, 500);
+            });
+          }
+        }
+      }, 100);
       
       const timer1 = setTimeout(() => setShowContent(true), 6000); // Start fade at 6s
       const timer2 = setTimeout(() => {
@@ -39,6 +52,7 @@ export default function Home() {
       }, 8000); // Complete at 8s
       
       return () => {
+        clearTimeout(playTimer);
         clearTimeout(timer1);
         clearTimeout(timer2);
       };
@@ -95,6 +109,7 @@ export default function Home() {
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black">
           <video
             ref={videoRef}
+            autoPlay
             muted
             playsInline
             preload="auto"
