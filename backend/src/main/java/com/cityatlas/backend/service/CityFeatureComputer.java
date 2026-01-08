@@ -108,6 +108,32 @@ public class CityFeatureComputer {
     private static final double LIVABILITY_SIZE_WEIGHT = 0.30;
     
     // ==========================================================================
+    // GROWTH SCORE BOUNDS
+    // ==========================================================================
+    
+    // Population growth rate bounds (percentage, annual)
+    // Min: -2% (significant population decline)
+    // Max: +5% (rapid growth, e.g., boom towns)
+    private static final double POPULATION_GROWTH_MIN = -2.0;
+    private static final double POPULATION_GROWTH_MAX = 5.0;
+    
+    // GDP growth rate bounds (percentage, annual)
+    // Min: -5% (severe recession)
+    // Max: +10% (rapid economic expansion)
+    private static final double GDP_GROWTH_MIN = -5.0;
+    private static final double GDP_GROWTH_MAX = 10.0;
+    
+    // Growth score weights
+    private static final double GROWTH_POPULATION_WEIGHT = 0.50;
+    private static final double GROWTH_GDP_WEIGHT = 0.50;
+    
+    // Overall score weights (updated to include growth)
+    private static final double OVERALL_ECONOMY_WEIGHT = 0.30;
+    private static final double OVERALL_LIVABILITY_WEIGHT = 0.35;
+    private static final double OVERALL_SUSTAINABILITY_WEIGHT = 0.20;
+    private static final double OVERALL_GROWTH_WEIGHT = 0.15;
+    
+    // ==========================================================================
     // MAIN COMPUTATION METHOD
     // ==========================================================================
     
@@ -119,30 +145,48 @@ public class CityFeatureComputer {
      * @return CityFeatures containing all computed scores with explanations
      */
     public CityFeatures computeFeatures(City city, Integer currentAqi) {
+        return computeFeatures(city, currentAqi, null, null);
+    }
+    
+    /**
+     * Compute all structured features for a city with growth metrics.
+     * 
+     * @param city The city entity with raw metrics
+     * @param currentAqi Current air quality index (0-500 scale, null if unavailable)
+     * @param populationGrowthRate Annual population growth rate (%, null if unavailable)
+     * @param gdpGrowthRate Annual GDP growth rate (%, null if unavailable)
+     * @return CityFeatures containing all computed scores with explanations
+     */
+    public CityFeatures computeFeatures(City city, Integer currentAqi, 
+                                         Double populationGrowthRate, Double gdpGrowthRate) {
         log.debug("[FEATURE] Computing features for city: {}", city.getSlug());
         
         // Compute individual scores
         ScoreResult economyScore = computeEconomyScore(city);
         ScoreResult livabilityScore = computeLivabilityScore(city, currentAqi);
         ScoreResult sustainabilityScore = computeSustainabilityScore(currentAqi);
+        ScoreResult growthScore = computeGrowthScore(populationGrowthRate, gdpGrowthRate);
         
         // Compute overall score (weighted average of available scores)
-        ScoreResult overallScore = computeOverallScore(economyScore, livabilityScore, sustainabilityScore);
+        ScoreResult overallScore = computeOverallScore(
+                economyScore, livabilityScore, sustainabilityScore, growthScore);
         
         CityFeatures features = CityFeatures.builder()
             .citySlug(city.getSlug())
             .economyScore(economyScore)
             .livabilityScore(livabilityScore)
             .sustainabilityScore(sustainabilityScore)
+            .growthScore(growthScore)
             .overallScore(overallScore)
-            .dataCompleteness(computeDataCompleteness(city, currentAqi))
+            .dataCompleteness(computeDataCompleteness(city, currentAqi, populationGrowthRate, gdpGrowthRate))
             .build();
         
-        log.info("[FEATURE] City {} scores: economy={}, livability={}, sustainability={}, overall={}",
+        log.info("[FEATURE] City {} scores: economy={}, livability={}, sustainability={}, growth={}, overall={}",
                 city.getSlug(),
                 economyScore.score() != null ? String.format("%.1f", economyScore.score()) : "N/A",
                 livabilityScore.score() != null ? String.format("%.1f", livabilityScore.score()) : "N/A",
                 sustainabilityScore.score() != null ? String.format("%.1f", sustainabilityScore.score()) : "N/A",
+                growthScore.score() != null ? String.format("%.1f", growthScore.score()) : "N/A",
                 overallScore.score() != null ? String.format("%.1f", overallScore.score()) : "N/A");
         
         return features;
@@ -402,40 +446,165 @@ public class CityFeatureComputer {
     }
     
     // ==========================================================================
+    // GROWTH SCORE
+    // ==========================================================================
+    
+    /**
+     * Compute growth score based on population and GDP growth rates.
+     * 
+     * FORMULA:
+     *   growth_score = (pop_growth_normalized * 0.50) + (gdp_growth_normalized * 0.50)
+     * 
+     * WHY THESE WEIGHTS:
+     * - Population growth (50%): Indicates migration attractiveness and demographic health
+     * - GDP growth (50%): Indicates economic momentum and investment potential
+     * 
+     * NORMALIZATION:
+     * - Population growth: -2% to +5% → 0-100
+     * - GDP growth: -5% to +10% → 0-100
+     * 
+     * @param populationGrowthRate Annual population growth rate (%)
+     * @param gdpGrowthRate Annual GDP growth rate (%)
+     * @return ScoreResult with value (0-100) and explanation
+     */
+    private ScoreResult computeGrowthScore(Double populationGrowthRate, Double gdpGrowthRate) {
+        List<String> components = new ArrayList<>();
+        List<String> missingData = new ArrayList<>();
+        double totalWeight = 0.0;
+        double weightedSum = 0.0;
+        
+        // Population growth component
+        if (populationGrowthRate != null) {
+            double popGrowthNormalized = normalize(
+                populationGrowthRate, POPULATION_GROWTH_MIN, POPULATION_GROWTH_MAX);
+            weightedSum += popGrowthNormalized * GROWTH_POPULATION_WEIGHT;
+            totalWeight += GROWTH_POPULATION_WEIGHT;
+            
+            String growthTier = classifyPopulationGrowth(populationGrowthRate);
+            components.add(String.format("Population growth: %.1f%% YoY (%s, contributes %.1f points)",
+                populationGrowthRate, growthTier, popGrowthNormalized * GROWTH_POPULATION_WEIGHT * 100));
+        } else {
+            missingData.add("Population growth rate");
+        }
+        
+        // GDP growth component
+        if (gdpGrowthRate != null) {
+            double gdpGrowthNormalized = normalize(
+                gdpGrowthRate, GDP_GROWTH_MIN, GDP_GROWTH_MAX);
+            weightedSum += gdpGrowthNormalized * GROWTH_GDP_WEIGHT;
+            totalWeight += GROWTH_GDP_WEIGHT;
+            
+            String growthTier = classifyGdpGrowth(gdpGrowthRate);
+            components.add(String.format("GDP growth: %.1f%% YoY (%s, contributes %.1f points)",
+                gdpGrowthRate, growthTier, gdpGrowthNormalized * GROWTH_GDP_WEIGHT * 100));
+        } else {
+            missingData.add("GDP growth rate");
+        }
+        
+        // Calculate final score
+        if (totalWeight == 0) {
+            return new ScoreResult(
+                null,
+                "Growth score unavailable - no growth data",
+                List.of(),
+                missingData,
+                0.0
+            );
+        }
+        
+        // Scale to account for missing components
+        double score = (weightedSum / totalWeight) * 100;
+        double confidence = totalWeight / (GROWTH_POPULATION_WEIGHT + GROWTH_GDP_WEIGHT);
+        
+        String explanation = generateGrowthExplanation(score, populationGrowthRate, gdpGrowthRate);
+        
+        return new ScoreResult(score, explanation, components, missingData, confidence);
+    }
+    
+    /**
+     * Generate human-readable explanation for growth score.
+     */
+    private String generateGrowthExplanation(double score, Double popGrowth, Double gdpGrowth) {
+        if (score >= 80) {
+            return "Rapidly growing city with strong population and economic expansion";
+        } else if (score >= 60) {
+            return "Healthy growth trajectory with positive momentum";
+        } else if (score >= 40) {
+            return "Stable with moderate growth - not declining";
+        } else if (score >= 20) {
+            return "Slow or stagnant growth - limited expansion";
+        } else {
+            return "Declining city with population loss or economic contraction";
+        }
+    }
+    
+    /**
+     * Classify population growth rate.
+     */
+    private String classifyPopulationGrowth(double rate) {
+        if (rate >= 3.0) return "rapid growth";
+        if (rate >= 1.5) return "strong growth";
+        if (rate >= 0.5) return "moderate growth";
+        if (rate >= 0.0) return "stable";
+        if (rate >= -1.0) return "slow decline";
+        return "significant decline";
+    }
+    
+    /**
+     * Classify GDP growth rate.
+     */
+    private String classifyGdpGrowth(double rate) {
+        if (rate >= 6.0) return "booming";
+        if (rate >= 3.0) return "strong expansion";
+        if (rate >= 1.5) return "healthy growth";
+        if (rate >= 0.0) return "stable";
+        if (rate >= -2.0) return "mild contraction";
+        return "recession";
+    }
+    
+    // ==========================================================================
     // OVERALL SCORE
     // ==========================================================================
     
     /**
      * Compute weighted overall score from component scores.
      * 
-     * WEIGHTS:
-     * - Economy: 35%
-     * - Livability: 40%
-     * - Sustainability: 25%
+     * WEIGHTS (updated to include growth):
+     * - Economy: 30%
+     * - Livability: 35%
+     * - Sustainability: 20%
+     * - Growth: 15%
      */
     private ScoreResult computeOverallScore(
-            ScoreResult economy, ScoreResult livability, ScoreResult sustainability) {
+            ScoreResult economy, ScoreResult livability, 
+            ScoreResult sustainability, ScoreResult growth) {
         
         double totalWeight = 0.0;
         double weightedSum = 0.0;
         List<String> components = new ArrayList<>();
         
         if (economy.score() != null) {
-            weightedSum += economy.score() * 0.35;
-            totalWeight += 0.35;
-            components.add(String.format("Economy (35%%): %.1f", economy.score()));
+            weightedSum += economy.score() * OVERALL_ECONOMY_WEIGHT;
+            totalWeight += OVERALL_ECONOMY_WEIGHT;
+            components.add(String.format("Economy (30%%): %.1f", economy.score()));
         }
         
         if (livability.score() != null) {
-            weightedSum += livability.score() * 0.40;
-            totalWeight += 0.40;
-            components.add(String.format("Livability (40%%): %.1f", livability.score()));
+            weightedSum += livability.score() * OVERALL_LIVABILITY_WEIGHT;
+            totalWeight += OVERALL_LIVABILITY_WEIGHT;
+            components.add(String.format("Livability (35%%): %.1f", livability.score()));
         }
         
         if (sustainability.score() != null) {
-            weightedSum += sustainability.score() * 0.25;
-            totalWeight += 0.25;
-            components.add(String.format("Sustainability (25%%): %.1f", sustainability.score()));
+            weightedSum += sustainability.score() * OVERALL_SUSTAINABILITY_WEIGHT;
+            totalWeight += OVERALL_SUSTAINABILITY_WEIGHT;
+            components.add(String.format("Sustainability (20%%): %.1f", sustainability.score()));
+        }
+        
+        if (growth.score() != null) {
+            weightedSum += growth.score() * OVERALL_GROWTH_WEIGHT;
+            totalWeight += OVERALL_GROWTH_WEIGHT;
+            components.add(String.format("Growth (15%%): %.1f", growth.score()));
         }
         
         if (totalWeight == 0) {
@@ -553,16 +722,28 @@ public class CityFeatureComputer {
     
     /**
      * Compute data completeness percentage (0-100).
+     * Overloaded for backward compatibility.
      */
     private double computeDataCompleteness(City city, Integer currentAqi) {
+        return computeDataCompleteness(city, currentAqi, null, null);
+    }
+    
+    /**
+     * Compute data completeness percentage (0-100).
+     * Includes growth metrics for full completeness calculation.
+     */
+    private double computeDataCompleteness(City city, Integer currentAqi,
+                                            Double populationGrowthRate, Double gdpGrowthRate) {
         int available = 0;
-        int total = 5;
+        int total = 7;  // Updated to include growth metrics
         
         if (city.getGdpPerCapita() != null) available++;
         if (city.getUnemploymentRate() != null) available++;
         if (city.getCostOfLivingIndex() != null) available++;
         if (city.getPopulation() != null) available++;
         if (currentAqi != null) available++;
+        if (populationGrowthRate != null) available++;
+        if (gdpGrowthRate != null) available++;
         
         return (double) available / total * 100;
     }
@@ -573,6 +754,13 @@ public class CityFeatureComputer {
     
     /**
      * Complete feature set for a city.
+     * 
+     * Contains all computed scores for AI-powered city analysis:
+     * - economyScore: Economic health (GDP, unemployment)
+     * - livabilityScore: Quality of life (cost, AQI, size)
+     * - sustainabilityScore: Environmental health (AQI, future: carbon)
+     * - growthScore: Growth trajectory (population, GDP growth)
+     * - overallScore: Weighted composite of all scores
      */
     @Data
     @Builder
@@ -581,6 +769,7 @@ public class CityFeatureComputer {
         private ScoreResult economyScore;
         private ScoreResult livabilityScore;
         private ScoreResult sustainabilityScore;
+        private ScoreResult growthScore;
         private ScoreResult overallScore;
         private double dataCompleteness;
         
@@ -591,22 +780,27 @@ public class CityFeatureComputer {
             StringBuilder sb = new StringBuilder();
             sb.append("=== COMPUTED CITY SCORES ===\n");
             
-            if (economyScore.score() != null) {
+            if (economyScore != null && economyScore.score() != null) {
                 sb.append(String.format("Economy Score: %.1f/100 - %s\n",
                     economyScore.score(), economyScore.explanation()));
             }
             
-            if (livabilityScore.score() != null) {
+            if (livabilityScore != null && livabilityScore.score() != null) {
                 sb.append(String.format("Livability Score: %.1f/100 - %s\n",
                     livabilityScore.score(), livabilityScore.explanation()));
             }
             
-            if (sustainabilityScore.score() != null) {
+            if (sustainabilityScore != null && sustainabilityScore.score() != null) {
                 sb.append(String.format("Sustainability Score: %.1f/100 - %s\n",
                     sustainabilityScore.score(), sustainabilityScore.explanation()));
             }
             
-            if (overallScore.score() != null) {
+            if (growthScore != null && growthScore.score() != null) {
+                sb.append(String.format("Growth Score: %.1f/100 - %s\n",
+                    growthScore.score(), growthScore.explanation()));
+            }
+            
+            if (overallScore != null && overallScore.score() != null) {
                 sb.append(String.format("Overall Score: %.1f/100 - %s\n",
                     overallScore.score(), overallScore.explanation()));
             }

@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.cityatlas.backend.dto.response.AiCitySummaryDTO;
+import com.cityatlas.backend.dto.response.ExplainableAiSummary;
 import com.cityatlas.backend.entity.City;
 import com.cityatlas.backend.service.CityFeatureComputer.CityFeatures;
 import com.cityatlas.backend.service.CityFeatureComputer.ScoreResult;
@@ -55,6 +56,9 @@ public class AiCitySummaryService {
     // Inject the feature computer for structured score calculation
     private final CityFeatureComputer featureComputer;
     
+    // Inject the explainability engine for interview-ready output
+    private final AiExplainabilityEngine explainabilityEngine;
+    
     // ============================================
     // THRESHOLDS AND CONSTANTS
     // Explanation: These define what "high" or "low" means
@@ -101,10 +105,13 @@ public class AiCitySummaryService {
      * REFACTORED: Now uses CityFeatureComputer to compute structured scores first,
      * then generates narratives informed by those scores.
      * 
+     * ENHANCED: Now includes full explainability output with reasoning chains,
+     * feature contributions, and interview-justifiable metadata.
+     * 
      * @param city The city entity with basic info (population, GDP, etc.)
      * @param currentAqi Current air quality index (0-500 scale)
      * @param popularityScore Relative popularity based on analytics events (0-100)
-     * @return AiCitySummaryDTO with generated insights and computed scores
+     * @return AiCitySummaryDTO with generated insights, computed scores, and explainability
      */
     public AiCitySummaryDTO generateSummary(City city, Integer currentAqi, Integer popularityScore) {
         log.info("Generating AI summary for city: {}", city.getSlug());
@@ -115,7 +122,12 @@ public class AiCitySummaryService {
         // PHASE 1: Compute structured features
         CityFeatures features = featureComputer.computeFeatures(city, currentAqi);
         
-        // PHASE 2: Generate narratives informed by computed scores
+        // PHASE 2: Generate explainable summary with full reasoning chains
+        Double aqiDouble = currentAqi != null ? currentAqi.doubleValue() : null;
+        ExplainableAiSummary explainableSummary = explainabilityEngine
+                .generateExplainableSummary(city, aqiDouble);
+        
+        // PHASE 3: Generate narratives informed by computed scores
         return AiCitySummaryDTO.builder()
                 // Narrative content (enhanced with score awareness)
                 .personality(generatePersonalityFromFeatures(city, features, currentAqi, popularityScore))
@@ -133,8 +145,11 @@ public class AiCitySummaryService {
                     .economy(features.getEconomyScore().explanation())
                     .livability(features.getLivabilityScore().explanation())
                     .sustainability(features.getSustainabilityScore().explanation())
+                    .growth(features.getGrowthScore().explanation())
                     .overall(features.getOverallScore().explanation())
                     .build())
+                // Full explainability output (interview-ready)
+                .explainableDetails(explainableSummary)
                 .build();
     }
     

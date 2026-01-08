@@ -173,6 +173,24 @@ public class AiCitySummaryDTO {
         private String economy;
         private String livability;
         private String sustainability;
+        private String growth;
         private String overall;
     }
+    
+    // ============================================
+    // EXPLAINABILITY METADATA (Interview-Ready)
+    // ============================================
+    
+    /**
+     * Full explainable AI summary with reasoning chains.
+     * 
+     * This is the interview-justifiable output showing:
+     * - Which features contributed to each score
+     * - Why the city is strong/weak in each dimension
+     * - Data evidence backing each conclusion
+     * - Confidence levels and limitations
+     * 
+     * @see ExplainableAiSummary
+     */
+    private ExplainableAiSummary explainableDetails;
 }
