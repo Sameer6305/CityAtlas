@@ -14,28 +14,77 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Analytics Event Producer Service
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * ANALYTICS EVENT PRODUCER - Kafka Message Publisher Service
+ * ═══════════════════════════════════════════════════════════════════════════════
  * 
  * Responsible for publishing analytics events to Kafka topics.
  * This service acts as the single entry point for all analytics event publishing,
  * ensuring consistent error handling and logging across the application.
  * 
- * Responsibilities:
- * - Route events to appropriate Kafka topics based on event type
- * - Serialize event payloads to JSON (handled by KafkaTemplate)
- * - Log successful publishes for monitoring and debugging
- * - Log failures with full context for troubleshooting
- * - Provide async publishing with CompletableFuture for non-blocking operations
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * WHY KAFKA FOR EVENT PRODUCTION?
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * 1. FIRE-AND-FORGET SEMANTICS:
+ *    - API response doesn't wait for analytics processing
+ *    - User experience remains fast regardless of analytics load
+ *    - Events are durably stored in Kafka for later processing
+ * 
+ * 2. GUARANTEED DELIVERY:
+ *    - Kafka acknowledgments ensure message persistence
+ *    - Replication protects against broker failures
+ *    - No lost events even during backend deployments
+ * 
+ * 3. BACKPRESSURE HANDLING:
+ *    - Kafka absorbs traffic spikes
+ *    - Consumers process at their own pace
+ *    - No dropped events during high load
+ * 
+ * 4. MULTI-CONSUMER ARCHITECTURE:
+ *    - Same event can be consumed by multiple systems
+ *    - Real-time dashboards, data warehouses, ML pipelines
+ *    - Add new consumers without changing producer code
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * HOW THIS SUPPORTS ANALYTICS PIPELINES
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * PRODUCER FLOW:
+ * 
+ *   [User Action]    →    [REST Controller]    →    [This Producer]
+ *        ↓                       ↓                        ↓
+ *   Click/Search         Validate Request          Publish to Kafka
+ *                                                        ↓
+ *                                              ┌─────────────────────┐
+ *                                              │   KAFKA TOPICS      │
+ *                                              │  • city-searched    │
+ *                                              │  • section-viewed   │
+ *                                              │  • time-spent       │
+ *                                              └─────────────────────┘
+ *                                                        ↓
+ *                              ┌──────────────────────────┼──────────────────────────┐
+ *                              ↓                          ↓                          ↓
+ *                      [Consumer: DB]           [Consumer: Stream]        [Consumer: ML]
+ *                      PostgreSQL store          Real-time metrics         Recommendations
+ * 
+ * PARTITIONING STRATEGY:
+ * - Key: citySlug (ensures all events for a city go to same partition)
+ * - Benefit: Ordered processing per city (important for session analysis)
+ * - Fallback: "global" key for events without citySlug (round-robin)
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * CONFIGURATION
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * Enabled via: kafka.enabled=true (disabled by default for local dev)
  * 
  * Thread Safety: This service is thread-safe (KafkaTemplate is thread-safe)
- * Error Handling: Failed publishes are logged but don't throw exceptions (fire-and-forget)
+ * Error Handling: Failed publishes are logged but don't throw exceptions
  * 
- * Usage:
- * <pre>
- * analyticsEventProducer.publishEvent(event)
- *     .thenAccept(result -> log.info("Event published successfully"))
- *     .exceptionally(ex -> { log.error("Failed to publish", ex); return null; });
- * </pre>
+ * @see AnalyticsEventConsumer
+ * @see AnalyticsEventService
+ * @see KafkaEventLogger
  */
 @Service
 @RequiredArgsConstructor
@@ -53,7 +102,16 @@ public class AnalyticsEventProducer {
     private final KafkaTemplate<String, AnalyticsEventPayload> kafkaTemplate;
     
     /**
-     * Publish an analytics event to the appropriate Kafka topic
+     * Structured JSON logger for Kafka pipeline observability
+     */
+    private final KafkaEventLogger kafkaEventLogger;
+    
+    /**
+     * ═══════════════════════════════════════════════════════════════════════════
+     * PUBLISH EVENT - Core Publishing Method
+     * ═══════════════════════════════════════════════════════════════════════════
+     * 
+     * Publishes an analytics event to the appropriate Kafka topic.
      * 
      * Topic Selection:
      * - Automatically routes to correct topic based on event.eventType
@@ -90,8 +148,16 @@ public class AnalyticsEventProducer {
         CompletableFuture<SendResult<String, AnalyticsEventPayload>> future = 
             kafkaTemplate.send(topic, partitionKey, event);
         
-        // Add success callback
+        // Add success callback with structured logging
         future.thenAccept(result -> {
+            // Log structured event production
+            kafkaEventLogger.logEventProduced(
+                result.getRecordMetadata().topic(),
+                result.getRecordMetadata().partition(),
+                result.getRecordMetadata().offset(),
+                event
+            );
+            
             log.info("Successfully published {} event to topic '{}', partition {}, offset {}", 
                 event.getEventType(),
                 result.getRecordMetadata().topic(),
@@ -110,10 +176,20 @@ public class AnalyticsEventProducer {
     }
     
     /**
-     * Publish a city searched event
+     * ═══════════════════════════════════════════════════════════════════════════
+     * PUBLISH CITY_SEARCHED Event
+     * ═══════════════════════════════════════════════════════════════════════════
      * 
      * Convenience method for CITY_SEARCHED events.
-     * Validates event type and delegates to publishEvent().
+     * 
+     * EVENT SCHEMA:
+     * {
+     *   "eventType": "CITY_SEARCHED",
+     *   "searchQuery": "tech cities california",
+     *   "citySlug": "san-francisco",     // null if no city clicked
+     *   "sessionId": "sess_abc123",
+     *   "timestamp": "2026-01-08T14:30:00"
+     * }
      * 
      * @param event The city searched event payload
      * @return CompletableFuture that completes when published
@@ -126,10 +202,20 @@ public class AnalyticsEventProducer {
     }
     
     /**
-     * Publish a section viewed event
+     * ═══════════════════════════════════════════════════════════════════════════
+     * PUBLISH SECTION_VIEWED Event
+     * ═══════════════════════════════════════════════════════════════════════════
      * 
      * Convenience method for SECTION_VIEWED events.
-     * Validates event type and delegates to publishEvent().
+     * 
+     * EVENT SCHEMA:
+     * {
+     *   "eventType": "SECTION_VIEWED",
+     *   "citySlug": "new-york",
+     *   "section": "economy",
+     *   "sessionId": "sess_abc123",
+     *   "timestamp": "2026-01-08T14:31:00"
+     * }
      * 
      * @param event The section viewed event payload
      * @return CompletableFuture that completes when published
@@ -142,10 +228,21 @@ public class AnalyticsEventProducer {
     }
     
     /**
-     * Publish a time spent on section event
+     * ═══════════════════════════════════════════════════════════════════════════
+     * PUBLISH TIME_SPENT_ON_SECTION Event
+     * ═══════════════════════════════════════════════════════════════════════════
      * 
      * Convenience method for TIME_SPENT_ON_SECTION events.
-     * Validates event type and delegates to publishEvent().
+     * 
+     * EVENT SCHEMA:
+     * {
+     *   "eventType": "TIME_SPENT_ON_SECTION",
+     *   "citySlug": "tokyo",
+     *   "section": "culture",
+     *   "durationInSeconds": 245,
+     *   "sessionId": "sess_abc123",
+     *   "timestamp": "2026-01-08T14:35:00"
+     * }
      * 
      * @param event The time spent event payload
      * @return CompletableFuture that completes when published

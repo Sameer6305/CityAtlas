@@ -1,15 +1,93 @@
 package com.cityatlas.backend.config;
 
 /**
- * Kafka Topics Configuration
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * KAFKA TOPICS CONFIGURATION
+ * ═══════════════════════════════════════════════════════════════════════════════
  * 
  * Centralized definition of all Kafka topic names used in CityAtlas.
  * Using constants ensures consistency across producers and consumers.
  * 
- * Topic Naming Convention: {environment}.{domain}.{event-type}
- * Example: prod.cityatlas.analytics.city-searched
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * WHY KAFKA FOR CITYATLAS ANALYTICS?
+ * ═══════════════════════════════════════════════════════════════════════════════
  * 
- * For development, topics are prefixed with "dev" to avoid conflicts.
+ * 1. DECOUPLING:
+ *    - Frontend actions don't wait for analytics processing
+ *    - Backend can scale analytics independently of API
+ *    - New analytics consumers can be added without code changes
+ * 
+ * 2. RELIABILITY:
+ *    - Events are durably stored on Kafka brokers
+ *    - Survives application restarts and deployments
+ *    - Can replay events for debugging or backfilling
+ * 
+ * 3. SCALABILITY:
+ *    - Partitioning allows parallel processing
+ *    - Consumer groups enable horizontal scaling
+ *    - Handles traffic spikes without data loss
+ * 
+ * 4. ANALYTICS PIPELINE:
+ *    - Single source of truth for user behavior
+ *    - Supports multiple downstream consumers:
+ *      • Real-time dashboards (Kafka Streams)
+ *      • Data warehouse sync (Kafka Connect → BigQuery)
+ *      • ML feature extraction (Spark Streaming)
+ *      • Alerting systems (anomaly detection)
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * TOPIC ARCHITECTURE
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ *   ┌─────────────────────────────────────────────────────────────────────────┐
+ *   │                        KAFKA CLUSTER                                   │
+ *   ├─────────────────────────────────────────────────────────────────────────┤
+ *   │                                                                         │
+ *   │  ┌─────────────────────────────────────────────────────────────────┐   │
+ *   │  │  cityatlas.analytics.city-searched                              │   │
+ *   │  │  ─────────────────────────────────────────────────────────────  │   │
+ *   │  │  Event: User searches for cities                                │   │
+ *   │  │  Partition Key: citySlug (or "global" if no city selected)     │   │
+ *   │  │  Retention: 30 days                                             │   │
+ *   │  │  Use Case: Search ranking, content gaps, SEO optimization      │   │
+ *   │  └─────────────────────────────────────────────────────────────────┘   │
+ *   │                                                                         │
+ *   │  ┌─────────────────────────────────────────────────────────────────┐   │
+ *   │  │  cityatlas.analytics.section-viewed                             │   │
+ *   │  │  ─────────────────────────────────────────────────────────────  │   │
+ *   │  │  Event: User views a city section (economy, culture, etc.)     │   │
+ *   │  │  Partition Key: citySlug                                        │   │
+ *   │  │  Retention: 30 days                                             │   │
+ *   │  │  Use Case: Section popularity, content prioritization          │   │
+ *   │  └─────────────────────────────────────────────────────────────────┘   │
+ *   │                                                                         │
+ *   │  ┌─────────────────────────────────────────────────────────────────┐   │
+ *   │  │  cityatlas.analytics.time-spent-on-section                      │   │
+ *   │  │  ─────────────────────────────────────────────────────────────  │   │
+ *   │  │  Event: User leaves section (duration captured)                 │   │
+ *   │  │  Partition Key: citySlug                                        │   │
+ *   │  │  Retention: 90 days (longer for engagement analysis)           │   │
+ *   │  │  Use Case: Content quality, engagement scoring, recommendations│   │
+ *   │  └─────────────────────────────────────────────────────────────────┘   │
+ *   │                                                                         │
+ *   └─────────────────────────────────────────────────────────────────────────┘
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * TOPIC NAMING CONVENTION
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * Format: {application}.{domain}.{event-type}
+ * 
+ * Examples:
+ * - cityatlas.analytics.city-searched
+ * - cityatlas.analytics.section-viewed
+ * - cityatlas.data.city-updated (future)
+ * - cityatlas.ai.summary-requested (future)
+ * 
+ * Benefits:
+ * - Easy to filter topics by domain in monitoring tools
+ * - Clear ownership and purpose
+ * - Supports ACLs (access control lists) by prefix
  */
 public final class KafkaTopics {
     

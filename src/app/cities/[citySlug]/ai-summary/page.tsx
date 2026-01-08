@@ -2,25 +2,61 @@
  * AI Summary Section Page
  * Route: /cities/[citySlug]/ai-summary
  * 
- * Premium glassmorphism design with smooth animations
+ * Premium glassmorphism design with scroll-triggered animations
  * LLM-generated city insights, strengths, weaknesses, recommendations
  */
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
-// Glassmorphism card component
-function GlassCard({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+// Custom hook for scroll-triggered animations
+function useScrollAnimation(threshold = 0.1) {
+  const ref = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold, rootMargin: '50px' }
+    );
+
+    const currentRef = ref.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [threshold]);
+
+  return { ref, isVisible };
+}
+
+// Glassmorphism card component with scroll-triggered animation
+function GlassCard({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+  const { ref, isVisible: isInView } = useScrollAnimation(0.1);
+  const [isAnimated, setIsAnimated] = useState(false);
   
   useEffect(() => {
-    const timer = setTimeout(() => setIsVisible(true), delay);
-    return () => clearTimeout(timer);
-  }, [delay]);
+    if (isInView) {
+      const timer = setTimeout(() => setIsAnimated(true), delay);
+      return () => clearTimeout(timer);
+    }
+  }, [isInView, delay]);
 
   return (
-    <div className={`backdrop-blur-xl bg-white/[0.03] border border-white/10 rounded-2xl transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} ${className}`}>
+    <div 
+      ref={ref}
+      className={`backdrop-blur-xl bg-white/[0.03] border border-white/10 rounded-2xl transition-all duration-[800ms] ease-out ${isAnimated ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-12 scale-[0.97]'} ${className}`}
+    >
       {children}
     </div>
   );
@@ -40,10 +76,10 @@ export default function AISummaryPage() {
   }, []);
 
   return (
-    <div className={`space-y-6 transition-all duration-700 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
+    <div className={`space-y-6 transition-all duration-[1200ms] ease-out ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
       
       {/* AI Overview */}
-      <GlassCard className="p-6 bg-gradient-to-br from-cyan-500/10 via-purple-500/5 to-transparent" delay={100}>
+      <GlassCard className="p-6 bg-gradient-to-br from-cyan-500/10 via-purple-500/5 to-transparent" delay={50}>
         <div className="flex items-start gap-5">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-400/30 to-purple-400/30 flex items-center justify-center border border-white/20 flex-shrink-0">
             <svg className="w-8 h-8 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -72,7 +108,7 @@ export default function AISummaryPage() {
 
       {/* Key Insights */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <GlassCard className="p-6 hover:bg-white/[0.05] transition-all duration-500" delay={200}>
+        <GlassCard className="p-6 hover:bg-white/[0.05] transition-all duration-500" delay={50}>
           <h3 className="text-lg font-semibold text-white mb-5 flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-green-500/20 flex items-center justify-center">
               <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -101,7 +137,7 @@ export default function AISummaryPage() {
           </ul>
         </GlassCard>
 
-        <GlassCard className="p-6 hover:bg-white/[0.05] transition-all duration-500" delay={300}>
+        <GlassCard className="p-6 hover:bg-white/[0.05] transition-all duration-500" delay={100}>
           <h3 className="text-lg font-semibold text-white mb-5 flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
               <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -132,7 +168,7 @@ export default function AISummaryPage() {
       </div>
 
       {/* Recommendations */}
-      <GlassCard className="p-6" delay={400}>
+      <GlassCard className="p-6" delay={50}>
         <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
             <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -183,7 +219,7 @@ export default function AISummaryPage() {
       </GlassCard>
 
       {/* Future Outlook */}
-      <GlassCard className="p-6" delay={500}>
+      <GlassCard className="p-6" delay={50}>
         <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-violet-500/20 flex items-center justify-center">
             <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

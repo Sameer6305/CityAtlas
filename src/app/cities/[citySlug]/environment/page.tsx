@@ -2,14 +2,44 @@
  * Environment Section Page
  * Route: /cities/[citySlug]/environment
  * 
- * Premium glassmorphism design with smooth animations
+ * Premium glassmorphism design with scroll-triggered animations
  * Displays air quality, green space, sustainability, climate risk
  */
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { LineChart, AreaChart } from '@/components';
+
+// Custom hook for scroll-triggered animations
+function useScrollAnimation(threshold = 0.1) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold, rootMargin: '50px' }
+    );
+
+    const currentRef = ref.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [threshold]);
+
+  return { ref, isVisible };
+}
 
 // Sample AQI data
 const aqiData = [
@@ -36,23 +66,29 @@ const energyData = [
   { year: '2024', renewable: 42, fossil: 58 },
 ];
 
-// Glassmorphism card component
+// Glassmorphism card component with scroll-triggered animation
 function GlassCard({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
-  const [isVisible, setIsVisible] = useState(false);
+  const { ref, isVisible: isInView } = useScrollAnimation(0.1);
+  const [isAnimated, setIsAnimated] = useState(false);
   
   useEffect(() => {
-    const timer = setTimeout(() => setIsVisible(true), delay);
-    return () => clearTimeout(timer);
-  }, [delay]);
+    if (isInView) {
+      const timer = setTimeout(() => setIsAnimated(true), delay);
+      return () => clearTimeout(timer);
+    }
+  }, [isInView, delay]);
 
   return (
-    <div className={`backdrop-blur-xl bg-white/[0.03] border border-white/10 rounded-2xl transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} ${className}`}>
+    <div 
+      ref={ref}
+      className={`backdrop-blur-xl bg-white/[0.03] border border-white/[0.08] rounded-2xl transition-all duration-[800ms] ease-out hover:bg-white/[0.06] hover:border-white/[0.15] hover:shadow-2xl hover:shadow-cyan-500/10 hover:scale-[1.01] hover:-translate-y-1 ${isAnimated ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-12 scale-[0.97]'} ${className}`}
+    >
       {children}
     </div>
   );
 }
 
-// Metric display component
+// Metric display component with scroll-triggered animation
 function MetricDisplay({ 
   label, 
   value, 
@@ -72,8 +108,21 @@ function MetricDisplay({
   iconBg?: string;
   delay?: number;
 }) {
+  const { ref, isVisible: isInView } = useScrollAnimation(0.1);
+  const [isAnimated, setIsAnimated] = useState(false);
+  
+  useEffect(() => {
+    if (isInView) {
+      const timer = setTimeout(() => setIsAnimated(true), delay);
+      return () => clearTimeout(timer);
+    }
+  }, [isInView, delay]);
+
   return (
-    <GlassCard className="p-5 hover:bg-white/[0.05] hover:scale-[1.02] transition-all duration-500 group" delay={delay}>
+    <div 
+      ref={ref}
+      className={`backdrop-blur-xl bg-white/[0.03] border border-white/[0.08] rounded-2xl p-5 hover:bg-white/[0.06] hover:border-white/[0.15] hover:scale-[1.03] hover:-translate-y-1 hover:shadow-2xl hover:shadow-cyan-500/15 transition-all duration-[800ms] ease-out group ${isAnimated ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-12 scale-[0.97]'}`}
+    >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-white/50 text-sm font-medium mb-1">{label}</p>
@@ -94,7 +143,7 @@ function MetricDisplay({
           {icon}
         </div>
       </div>
-    </GlassCard>
+    </div>
   );
 }
 
@@ -107,7 +156,7 @@ export default function EnvironmentPage() {
   }, []);
 
   return (
-    <div className={`space-y-6 transition-all duration-700 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
+    <div className={`space-y-8 transition-all duration-[1200ms] ease-out ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
       
       {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

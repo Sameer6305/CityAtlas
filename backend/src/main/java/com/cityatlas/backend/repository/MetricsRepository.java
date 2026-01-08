@@ -157,4 +157,14 @@ public interface MetricsRepository extends JpaRepository<Metrics, Long> {
      * @return Count of metrics
      */
     long countByCityAndMetricType(City city, MetricType metricType);
+    
+    /**
+     * Find all metrics recorded within a date range (cross-city).
+     * Used for ETL batch processing.
+     * 
+     * @param startDate Start of date range
+     * @param endDate End of date range
+     * @return List of all metrics in the date range
+     */
+    List<Metrics> findByRecordedAtBetween(LocalDateTime startDate, LocalDateTime endDate);
 }

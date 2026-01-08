@@ -10,18 +10,109 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Analytics Event Payload
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * ANALYTICS EVENT PAYLOAD - Kafka Message Schema
+ * ═══════════════════════════════════════════════════════════════════════════════
  * 
  * Standard payload structure for all analytics events published to Kafka.
  * This DTO is serialized to JSON and sent to various analytics topics.
  * 
- * Event Types:
- * - CITY_SEARCHED: User searched for cities (citySlug may be null if no result clicked)
- * - SECTION_VIEWED: User viewed a specific section (section required)
- * - TIME_SPENT_ON_SECTION: User spent time on a section (section and durationInSeconds required)
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * WHY STRUCTURED EVENTS?
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * 1. SCHEMA CONSISTENCY:
+ *    - All events follow the same structure
+ *    - Easy to parse in any downstream system
+ *    - Schema evolution with backward compatibility
+ * 
+ * 2. TYPE SAFETY:
+ *    - Compile-time validation in Java
+ *    - Runtime validation via isValid() methods
+ *    - JSON schema can be generated for documentation
+ * 
+ * 3. ANALYTICS PIPELINE COMPATIBILITY:
+ *    - Works with Kafka Connect transformations
+ *    - Easy to query in BigQuery/Snowflake
+ *    - ML feature extraction is straightforward
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * EVENT TYPE SCHEMAS
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * 
+ * 1. CITY_SEARCHED - User searched for cities
+ * ────────────────────────────────────────────────────────────────────────────────
+ * {
+ *   "eventType": "CITY_SEARCHED",
+ *   "searchQuery": "best tech cities",         // REQUIRED: Search term
+ *   "citySlug": "san-francisco",              // OPTIONAL: If user clicked result
+ *   "sessionId": "sess_abc123",               // REQUIRED: Session tracking
+ *   "userId": "user_xyz789",                  // OPTIONAL: If authenticated
+ *   "timestamp": "2026-01-08T14:30:00",       // REQUIRED: When event occurred
+ *   "referrer": "google",                     // OPTIONAL: Traffic source
+ *   "deviceType": "desktop"                   // OPTIONAL: Device category
+ * }
+ * 
+ * Analytics Use Cases:
+ * - Track popular search terms
+ * - Identify cities users want but don't exist
+ * - Calculate search-to-click conversion rate
+ * - Feed search autocomplete ML model
+ * 
+ * ────────────────────────────────────────────────────────────────────────────────
+ * 2. SECTION_VIEWED - User viewed a city section
+ * ────────────────────────────────────────────────────────────────────────────────
+ * {
+ *   "eventType": "SECTION_VIEWED",
+ *   "citySlug": "new-york",                   // REQUIRED: Which city
+ *   "section": "economy",                     // REQUIRED: Which section
+ *   "sessionId": "sess_abc123",               // REQUIRED: Session tracking
+ *   "userId": "user_xyz789",                  // OPTIONAL: If authenticated
+ *   "timestamp": "2026-01-08T14:31:00",       // REQUIRED: When event occurred
+ *   "referrer": "internal",                   // OPTIONAL: Previous page
+ *   "deviceType": "mobile"                    // OPTIONAL: Device category
+ * }
+ * 
+ * Analytics Use Cases:
+ * - Track section popularity per city
+ * - Optimize section ordering
+ * - Personalize homepage recommendations
+ * - A/B test section layouts
+ * 
+ * ────────────────────────────────────────────────────────────────────────────────
+ * 3. TIME_SPENT_ON_SECTION - User engagement duration
+ * ────────────────────────────────────────────────────────────────────────────────
+ * {
+ *   "eventType": "TIME_SPENT_ON_SECTION",
+ *   "citySlug": "tokyo",                      // REQUIRED: Which city
+ *   "section": "culture",                     // REQUIRED: Which section
+ *   "durationInSeconds": 245,                 // REQUIRED: Time spent
+ *   "sessionId": "sess_abc123",               // REQUIRED: Session tracking
+ *   "userId": "user_xyz789",                  // OPTIONAL: If authenticated
+ *   "timestamp": "2026-01-08T14:35:00",       // REQUIRED: When user left
+ *   "deviceType": "desktop"                   // OPTIONAL: Device category
+ * }
+ * 
+ * Analytics Use Cases:
+ * - Measure content quality (avg time = engagement)
+ * - Identify high-value content (long read times)
+ * - Detect content issues (very short times = bounce)
+ * - Feed recommendation engine with engagement signals
+ * 
+ * Engagement Benchmarks:
+ * - < 10s: Bounce (potential content issue)
+ * - 10-60s: Quick scan
+ * - 60-180s: Normal engagement
+ * - > 180s: Deep engagement (high-value content)
+ * 
+ * ═══════════════════════════════════════════════════════════════════════════════
  * 
  * Thread Safety: This class is immutable when used with Lombok's @Builder
  * Serialization: Uses Jackson for JSON serialization to Kafka
+ * 
+ * @see com.cityatlas.backend.service.AnalyticsEventProducer
+ * @see com.cityatlas.backend.service.AnalyticsEventConsumer
+ * @see com.cityatlas.backend.service.KafkaEventLogger
  */
 @Data
 @Builder

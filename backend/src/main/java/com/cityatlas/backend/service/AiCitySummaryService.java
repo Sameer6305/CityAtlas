@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 
 import com.cityatlas.backend.dto.response.AiCitySummaryDTO;
 import com.cityatlas.backend.entity.City;
+import com.cityatlas.backend.service.CityFeatureComputer.CityFeatures;
+import com.cityatlas.backend.service.CityFeatureComputer.ScoreResult;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,16 +22,28 @@ import lombok.extern.slf4j.Slf4j;
  * logic to analyze city data and produce insights. All rules are documented with
  * clear reasoning for why they exist.
  * 
- * Design Philosophy:
- * - Explainability: Every decision can be traced to a specific rule
- * - Maintainability: Logic is simple enough for any developer to modify
- * - Transparency: No black boxes - all reasoning is visible in code
+ * ==============================================================================
+ * REFACTORED ARCHITECTURE (v2)
+ * ==============================================================================
  * 
- * Data Sources Used:
- * - City metrics: population, GDP, unemployment, cost of living
- * - Environmental data: AQI (Air Quality Index)
- * - User engagement: analytics event counts (popularity indicators)
+ * The summary generation now uses a two-phase approach:
  * 
+ *   Phase 1: Feature Computation (CityFeatureComputer)
+ *   - Computes structured scores: economy, livability, sustainability
+ *   - Each score is 0-100 with full explainability
+ *   - Scores include confidence and component breakdown
+ * 
+ *   Phase 2: Narrative Generation (This Service)
+ *   - Uses computed scores to generate personality text
+ *   - Scores inform strengths/weaknesses identification
+ *   - Explanations become part of the output
+ * 
+ * This separation improves:
+ * - Testability: Scores can be unit tested independently
+ * - Explainability: Every output traces to score components
+ * - Consistency: Same scores always produce same narratives
+ * 
+ * @see CityFeatureComputer
  * @see AiCitySummaryDTO
  * @see City
  */
@@ -37,6 +51,9 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class AiCitySummaryService {
+    
+    // Inject the feature computer for structured score calculation
+    private final CityFeatureComputer featureComputer;
     
     // ============================================
     // THRESHOLDS AND CONSTANTS
@@ -79,12 +96,15 @@ public class AiCitySummaryService {
     // ============================================
     
     /**
-     * Generate AI city summary with personality, strengths, weaknesses, and audience fit
+     * Generate AI city summary with personality, strengths, weaknesses, and audience fit.
+     * 
+     * REFACTORED: Now uses CityFeatureComputer to compute structured scores first,
+     * then generates narratives informed by those scores.
      * 
      * @param city The city entity with basic info (population, GDP, etc.)
      * @param currentAqi Current air quality index (0-500 scale)
      * @param popularityScore Relative popularity based on analytics events (0-100)
-     * @return AiCitySummaryDTO with generated insights
+     * @return AiCitySummaryDTO with generated insights and computed scores
      */
     public AiCitySummaryDTO generateSummary(City city, Integer currentAqi, Integer popularityScore) {
         log.info("Generating AI summary for city: {}", city.getSlug());
@@ -92,6 +112,38 @@ public class AiCitySummaryService {
         // Log data availability for transparency and debugging
         logDataAvailability(city, currentAqi, popularityScore);
         
+        // PHASE 1: Compute structured features
+        CityFeatures features = featureComputer.computeFeatures(city, currentAqi);
+        
+        // PHASE 2: Generate narratives informed by computed scores
+        return AiCitySummaryDTO.builder()
+                // Narrative content (enhanced with score awareness)
+                .personality(generatePersonalityFromFeatures(city, features, currentAqi, popularityScore))
+                .strengths(generateStrengthsFromFeatures(city, features, currentAqi, popularityScore))
+                .weaknesses(generateWeaknessesFromFeatures(city, features, currentAqi))
+                .bestSuitedFor(generateBestSuitedForFromFeatures(city, features, currentAqi))
+                // Computed scores (for frontend display and comparison)
+                .economyScore(features.getEconomyScore().score())
+                .livabilityScore(features.getLivabilityScore().score())
+                .sustainabilityScore(features.getSustainabilityScore().score())
+                .overallScore(features.getOverallScore().score())
+                .dataCompleteness(features.getDataCompleteness())
+                // Score explanations (for transparency)
+                .scoreExplanations(AiCitySummaryDTO.ScoreExplanations.builder()
+                    .economy(features.getEconomyScore().explanation())
+                    .livability(features.getLivabilityScore().explanation())
+                    .sustainability(features.getSustainabilityScore().explanation())
+                    .overall(features.getOverallScore().explanation())
+                    .build())
+                .build();
+    }
+    
+    /**
+     * Legacy method - forwards to new implementation for backward compatibility.
+     * @deprecated Use generateSummary which now includes computed scores.
+     */
+    @Deprecated
+    public AiCitySummaryDTO generateSummaryLegacy(City city, Integer currentAqi, Integer popularityScore) {
         return AiCitySummaryDTO.builder()
                 .personality(generatePersonality(city, currentAqi, popularityScore))
                 .strengths(generateStrengths(city, currentAqi, popularityScore))
@@ -102,8 +154,262 @@ public class AiCitySummaryService {
     
     
     // ============================================
-    // PERSONALITY GENERATION
-    // Rule: Combine size, economy, and quality of life into narrative
+    // SCORE-INFORMED PERSONALITY GENERATION
+    // ============================================
+    
+    /**
+     * Generate personality paragraph informed by computed scores.
+     * 
+     * The scores provide objective anchors for the narrative:
+     * - Economy score informs job market and prosperity description
+     * - Livability score informs quality of life narrative
+     * - Sustainability score informs environmental description
+     */
+    private String generatePersonalityFromFeatures(City city, CityFeatures features, 
+            Integer currentAqi, Integer popularityScore) {
+        StringBuilder personality = new StringBuilder();
+        
+        // Size-based introduction
+        if (city.getPopulation() > MAJOR_CITY_POPULATION) {
+            personality.append("A major metropolitan hub ");
+        } else if (city.getPopulation() > MIDSIZED_CITY_POPULATION) {
+            personality.append("A mid-sized city ");
+        } else {
+            personality.append("A smaller city ");
+        }
+        
+        // Economy description informed by economy score
+        ScoreResult economyScore = features.getEconomyScore();
+        if (economyScore.score() != null) {
+            if (economyScore.score() >= 70) {
+                personality.append("with a thriving, prosperous economy. ");
+            } else if (economyScore.score() >= 50) {
+                personality.append("with a stable, growing economy. ");
+            } else if (economyScore.score() >= 30) {
+                personality.append("with a developing economy showing potential. ");
+            } else {
+                personality.append("facing economic challenges but with opportunities for growth. ");
+            }
+        } else {
+            personality.append("with an evolving economic landscape. ");
+        }
+        
+        // Job market description
+        if (city.getUnemploymentRate() != null) {
+            if (city.getUnemploymentRate() < LOW_UNEMPLOYMENT_THRESHOLD) {
+                personality.append("The job market is strong with diverse opportunities. ");
+            } else if (city.getUnemploymentRate() > HIGH_UNEMPLOYMENT_THRESHOLD) {
+                personality.append("The job market is competitive with limited openings. ");
+            }
+        }
+        
+        // Environment description informed by sustainability score
+        ScoreResult sustainabilityScore = features.getSustainabilityScore();
+        if (sustainabilityScore.score() != null) {
+            if (sustainabilityScore.score() >= 75) {
+                personality.append("Residents enjoy clean air and a healthy environment");
+            } else if (sustainabilityScore.score() >= 50) {
+                personality.append("Environmental conditions are typical for an urban area");
+            } else {
+                personality.append("Air quality is a consideration for health-conscious residents");
+            }
+        } else {
+            personality.append("Insufficient data to assess air quality impact");
+        }
+        
+        // Cost of living context informed by livability score
+        ScoreResult livabilityScore = features.getLivabilityScore();
+        if (city.getCostOfLivingIndex() != null) {
+            if (city.getCostOfLivingIndex() > HIGH_COST_THRESHOLD) {
+                personality.append(", though the high cost of living requires significant income.");
+            } else if (city.getCostOfLivingIndex() < LOW_COST_THRESHOLD) {
+                personality.append(", with an affordable cost of living that stretches your dollar.");
+            } else {
+                personality.append(", with costs in line with national averages.");
+            }
+        } else {
+            personality.append(", though cost of living data is currently unavailable.");
+        }
+        
+        return personality.toString();
+    }
+    
+    // ============================================
+    // SCORE-INFORMED STRENGTHS GENERATION
+    // ============================================
+    
+    /**
+     * Generate strengths list informed by computed scores.
+     * 
+     * Strengths are now derived from score tiers, ensuring consistency
+     * between narrative and numerical representation.
+     */
+    private List<String> generateStrengthsFromFeatures(City city, CityFeatures features,
+            Integer currentAqi, Integer popularityScore) {
+        List<String> strengths = new ArrayList<>();
+        
+        // Economy-based strengths (derived from economy score tier)
+        ScoreResult economyScore = features.getEconomyScore();
+        if (economyScore.score() != null && economyScore.score() >= 60) {
+            strengths.add(String.format("Strong economy (score: %.0f/100)", economyScore.score()));
+        }
+        if (city.getUnemploymentRate() != null && city.getUnemploymentRate() < LOW_UNEMPLOYMENT_THRESHOLD) {
+            strengths.add("Healthy job market with low unemployment");
+        }
+        
+        // Livability-based strengths
+        ScoreResult livabilityScore = features.getLivabilityScore();
+        if (livabilityScore.score() != null && livabilityScore.score() >= 60) {
+            strengths.add(String.format("High quality of life (score: %.0f/100)", livabilityScore.score()));
+        }
+        if (city.getCostOfLivingIndex() != null && city.getCostOfLivingIndex() < LOW_COST_THRESHOLD) {
+            strengths.add("Affordable cost of living");
+        }
+        
+        // Sustainability-based strengths
+        ScoreResult sustainabilityScore = features.getSustainabilityScore();
+        if (sustainabilityScore.score() != null && sustainabilityScore.score() >= 75) {
+            strengths.add("Excellent air quality and environment");
+        }
+        
+        // Size-based strengths
+        if (city.getPopulation() > MAJOR_CITY_POPULATION) {
+            strengths.add("Major metropolitan amenities and infrastructure");
+        }
+        
+        // Popularity as strength
+        if (popularityScore != null && popularityScore > 70) {
+            strengths.add("Growing popularity among professionals");
+        }
+        
+        // Fallback
+        if (strengths.isEmpty()) {
+            log.info("No specific strengths for {} from scores, using generic", city.getSlug());
+            strengths.add("Tight-knit community atmosphere");
+            strengths.add("Potential for growth and development");
+        }
+        
+        return strengths;
+    }
+    
+    // ============================================
+    // SCORE-INFORMED WEAKNESSES GENERATION
+    // ============================================
+    
+    /**
+     * Generate weaknesses list informed by computed scores.
+     * 
+     * Weaknesses are derived from low score tiers, maintaining
+     * consistency with the numerical representation.
+     */
+    private List<String> generateWeaknessesFromFeatures(City city, CityFeatures features, Integer currentAqi) {
+        List<String> weaknesses = new ArrayList<>();
+        
+        // Economy-based weaknesses
+        ScoreResult economyScore = features.getEconomyScore();
+        if (economyScore.score() != null && economyScore.score() < 40) {
+            weaknesses.add(String.format("Economic challenges (score: %.0f/100)", economyScore.score()));
+        }
+        if (city.getUnemploymentRate() != null && city.getUnemploymentRate() > HIGH_UNEMPLOYMENT_THRESHOLD) {
+            weaknesses.add("Competitive job market with higher unemployment");
+        }
+        
+        // Livability-based weaknesses
+        if (city.getCostOfLivingIndex() != null && city.getCostOfLivingIndex() > HIGH_COST_THRESHOLD) {
+            weaknesses.add("High cost of living");
+        }
+        
+        // Sustainability-based weaknesses
+        ScoreResult sustainabilityScore = features.getSustainabilityScore();
+        if (sustainabilityScore.score() != null && sustainabilityScore.score() < 50) {
+            weaknesses.add("Air quality concerns");
+        }
+        
+        // Size-based weaknesses
+        if (city.getPopulation() < MIDSIZED_CITY_POPULATION) {
+            weaknesses.add("Limited cultural and entertainment options");
+        }
+        
+        // Data completeness warning
+        if (features.getDataCompleteness() < 60) {
+            weaknesses.add(String.format("Limited data available (%.0f%% complete)", 
+                features.getDataCompleteness()));
+        }
+        
+        // Fallback
+        if (weaknesses.isEmpty()) {
+            log.info("No specific weaknesses for {} from scores", city.getSlug());
+            weaknesses.add("No significant weaknesses identified with available data");
+        }
+        
+        return weaknesses;
+    }
+    
+    // ============================================
+    // SCORE-INFORMED BEST SUITED FOR GENERATION
+    // ============================================
+    
+    /**
+     * Generate ideal resident profiles informed by computed scores.
+     * 
+     * The score combinations suggest different ideal demographics.
+     */
+    private List<String> generateBestSuitedForFromFeatures(City city, CityFeatures features, Integer currentAqi) {
+        List<String> bestSuitedFor = new ArrayList<>();
+        
+        ScoreResult economyScore = features.getEconomyScore();
+        ScoreResult livabilityScore = features.getLivabilityScore();
+        ScoreResult sustainabilityScore = features.getSustainabilityScore();
+        
+        // High earners for expensive + prosperous cities
+        if (city.getCostOfLivingIndex() != null && city.getCostOfLivingIndex() > HIGH_COST_THRESHOLD 
+                && economyScore.score() != null && economyScore.score() >= 60) {
+            bestSuitedFor.add("High-earning professionals and executives");
+        }
+        
+        // Career-focused for strong economies
+        if (economyScore.score() != null && economyScore.score() >= 60) {
+            bestSuitedFor.add("Career-focused individuals seeking job opportunities");
+        }
+        
+        // Budget-conscious for affordable + livable cities
+        if (livabilityScore.score() != null && livabilityScore.score() >= 60 
+                && city.getCostOfLivingIndex() != null && city.getCostOfLivingIndex() < LOW_COST_THRESHOLD) {
+            bestSuitedFor.add("Budget-conscious families and retirees");
+        }
+        
+        // Health-conscious for sustainable cities
+        if (sustainabilityScore.score() != null && sustainabilityScore.score() >= 70) {
+            bestSuitedFor.add("Families with children and health-conscious individuals");
+        }
+        
+        // Urban enthusiasts for major cities
+        if (city.getPopulation() > MAJOR_CITY_POPULATION) {
+            bestSuitedFor.add("Urban enthusiasts seeking diversity and cultural experiences");
+        }
+        
+        // Community seekers for smaller cities
+        if (city.getPopulation() < MIDSIZED_CITY_POPULATION) {
+            bestSuitedFor.add("Those seeking tight-knit community and slower pace");
+        }
+        
+        // Entrepreneurs for prosperous economies
+        if (economyScore.score() != null && economyScore.score() >= 70) {
+            bestSuitedFor.add("Entrepreneurs and small business owners");
+        }
+        
+        // Fallback
+        if (bestSuitedFor.isEmpty()) {
+            bestSuitedFor.add("Those seeking a balanced, middle-American lifestyle");
+            bestSuitedFor.add("Remote workers with location flexibility");
+        }
+        
+        return bestSuitedFor;
+    }
+    
+    
+    // ============================================
+    // LEGACY METHODS (for backward compatibility)
     // ============================================
     
     /**

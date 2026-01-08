@@ -101,4 +101,78 @@ public class AiCitySummaryDTO {
      * Typical count: 4-6 profiles
      */
     private List<String> bestSuitedFor;
+    
+    // ============================================
+    // STRUCTURED SCORES (Computed Features)
+    // ============================================
+    
+    /**
+     * Economy score (0-100)
+     * 
+     * Computed from GDP per capita and unemployment rate.
+     * Higher = stronger economy with more opportunities.
+     * 
+     * Null if insufficient data to compute.
+     */
+    private Double economyScore;
+    
+    /**
+     * Livability score (0-100)
+     * 
+     * Computed from cost of living, air quality, and city size.
+     * Higher = more affordable, cleaner, and more manageable.
+     * 
+     * Null if insufficient data to compute.
+     */
+    private Double livabilityScore;
+    
+    /**
+     * Sustainability score (0-100)
+     * 
+     * Computed from environmental metrics (currently AQI).
+     * Higher = cleaner environment and better sustainability practices.
+     * 
+     * Null if insufficient data to compute.
+     */
+    private Double sustainabilityScore;
+    
+    /**
+     * Overall city score (0-100)
+     * 
+     * Weighted average of economy (35%), livability (40%), sustainability (25%).
+     * Provides a single number for quick comparison.
+     * 
+     * Null if insufficient data to compute.
+     */
+    private Double overallScore;
+    
+    /**
+     * Data completeness percentage (0-100)
+     * 
+     * Indicates how much data was available to compute scores.
+     * Low values mean scores may be less reliable.
+     */
+    private Double dataCompleteness;
+    
+    /**
+     * Score explanations for each dimension.
+     * 
+     * Maps score name to human-readable explanation.
+     * Example: {"economyScore": "Strong economy with low unemployment"}
+     */
+    private ScoreExplanations scoreExplanations;
+    
+    /**
+     * Nested class for score explanations.
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ScoreExplanations {
+        private String economy;
+        private String livability;
+        private String sustainability;
+        private String overall;
+    }
 }

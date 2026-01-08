@@ -2,12 +2,12 @@
  * Analytics Section Page
  * Route: /cities/[citySlug]/analytics
  * 
- * Premium glassmorphism analytics dashboard
+ * Premium glassmorphism analytics dashboard with scroll-triggered animations
  */
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AQITrendChart } from '@/components/charts/AQITrendChart';
 import { JobSectorChart } from '@/components/charts/JobSectorChart';
 import { CostOfLivingChart } from '@/components/charts/CostOfLivingChart';
@@ -19,33 +19,75 @@ import {
   getPopulationData 
 } from '@/lib/mock';
 
-// Glassmorphism card component
-function GlassCard({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+// Custom hook for scroll-triggered animations
+function useScrollAnimation(threshold = 0.1) {
+  const ref = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold, rootMargin: '50px' }
+    );
+
+    const currentRef = ref.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [threshold]);
+
+  return { ref, isVisible };
+}
+
+// Glassmorphism card component with scroll-triggered animation
+function GlassCard({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+  const { ref, isVisible: isInView } = useScrollAnimation(0.1);
+  const [isAnimated, setIsAnimated] = useState(false);
   
   useEffect(() => {
-    const timer = setTimeout(() => setIsVisible(true), delay);
-    return () => clearTimeout(timer);
-  }, [delay]);
+    if (isInView) {
+      const timer = setTimeout(() => setIsAnimated(true), delay);
+      return () => clearTimeout(timer);
+    }
+  }, [isInView, delay]);
 
   return (
-    <div className={`backdrop-blur-xl bg-white/[0.03] border border-white/10 rounded-2xl transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} ${className}`}>
+    <div 
+      ref={ref}
+      className={`backdrop-blur-xl bg-white/[0.03] border border-white/10 rounded-2xl transition-all duration-[800ms] ease-out ${isAnimated ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-12 scale-[0.97]'} ${className}`}
+    >
       {children}
     </div>
   );
 }
 
-// Section header component
+// Section header component with scroll-triggered animation
 function SectionHeader({ icon, title, description, delay = 0 }: { icon: string; title: string; description: string; delay?: number }) {
-  const [isVisible, setIsVisible] = useState(false);
+  const { ref, isVisible: isInView } = useScrollAnimation(0.1);
+  const [isAnimated, setIsAnimated] = useState(false);
   
   useEffect(() => {
-    const timer = setTimeout(() => setIsVisible(true), delay);
-    return () => clearTimeout(timer);
-  }, [delay]);
+    if (isInView) {
+      const timer = setTimeout(() => setIsAnimated(true), delay);
+      return () => clearTimeout(timer);
+    }
+  }, [isInView, delay]);
 
   return (
-    <div className={`flex items-center gap-4 mb-5 transition-all duration-700 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'}`}>
+    <div 
+      ref={ref}
+      className={`flex items-center gap-4 mb-5 transition-all duration-[800ms] ease-out ${isAnimated ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'}`}
+    >
       <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20 flex items-center justify-center border border-white/10">
         <span className="text-2xl">{icon}</span>
       </div>
@@ -71,10 +113,10 @@ export default function AnalyticsPage() {
   }, []);
 
   return (
-    <div className={`space-y-8 transition-all duration-700 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
+    <div className={`space-y-8 transition-all duration-[1200ms] ease-out ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
       
       {/* Page Header */}
-      <GlassCard className="p-6 bg-gradient-to-r from-cyan-500/10 via-purple-500/5 to-transparent" delay={100}>
+      <GlassCard className="p-6 bg-gradient-to-r from-cyan-500/10 via-purple-500/5 to-transparent" delay={50}>
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400/30 to-purple-400/30 flex items-center justify-center border border-white/20">
             <svg className="w-7 h-7 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -101,9 +143,9 @@ export default function AnalyticsPage() {
           icon="🌤️" 
           title="Environmental Quality" 
           description="Air quality index trends and historical data"
-          delay={200}
+          delay={50}
         />
-        <GlassCard className="p-6" delay={300}>
+        <GlassCard className="p-6" delay={100}>
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-lg font-semibold text-white">Air Quality Index (AQI) - 12 Month Trend</h3>
@@ -130,10 +172,10 @@ export default function AnalyticsPage() {
           icon="💼" 
           title="Economic Indicators" 
           description="Employment distribution and cost of living analysis"
-          delay={400}
+          delay={50}
         />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <GlassCard className="p-6 hover:bg-white/[0.05] transition-all duration-500" delay={500}>
+          <GlassCard className="p-6 hover:bg-white/[0.05] transition-all duration-500" delay={100}>
             <div className="mb-4">
               <h3 className="text-lg font-semibold text-white">Employment by Sector</h3>
               <p className="text-white/50 text-sm">Current workforce distribution across major industries</p>
@@ -141,7 +183,7 @@ export default function AnalyticsPage() {
             <JobSectorChart data={jobData} />
           </GlassCard>
 
-          <GlassCard className="p-6 hover:bg-white/[0.05] transition-all duration-500" delay={600}>
+          <GlassCard className="p-6 hover:bg-white/[0.05] transition-all duration-500" delay={150}>
             <div className="mb-4">
               <h3 className="text-lg font-semibold text-white">Cost of Living Index</h3>
               <p className="text-white/50 text-sm">Comparison to national average (100 = national average)</p>
@@ -157,9 +199,9 @@ export default function AnalyticsPage() {
           icon="👥" 
           title="Demographics" 
           description="Population growth trends and projections"
-          delay={700}
+          delay={50}
         />
-        <GlassCard className="p-6" delay={800}>
+        <GlassCard className="p-6" delay={100}>
           <div className="mb-4">
             <h3 className="text-lg font-semibold text-white">Population Growth (10-Year Trend)</h3>
             <p className="text-white/50 text-sm">Historical population in millions with year-over-year growth rates</p>
@@ -169,7 +211,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Data Insights Footer */}
-      <GlassCard className="p-6" delay={900}>
+      <GlassCard className="p-6" delay={50}>
         <div className="flex items-start gap-4">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center flex-shrink-0">
             <svg className="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
