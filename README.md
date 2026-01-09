@@ -25,7 +25,12 @@
   - [Decision Support](#decision-support)
   - [Intelligence Categorization](#intelligence-categorization)
 - [AI Feature Engineering](#ai-feature-engineering)
+- [AI Inference Pipeline](#ai-inference-pipeline)
+- [AI Quality Safeguards](#ai-quality-safeguards)
+- [AI Graceful Fallbacks](#ai-graceful-fallbacks)
+- [AI Prompt Engineering](#ai-prompt-engineering)
 - [Explainable AI Framework](#explainable-ai-framework)
+- [AI File Structure](#ai-file-structure)
 - [Data Quality Framework](#data-quality-framework)
 - [Cloud Readiness (AWS)](#cloud-readiness-aws)
 - [Technology Stack](#technology-stack)
@@ -575,6 +580,268 @@ Population: Log-scale normalization (handles 50K - 10M range)
 
 ---
 
+## AI Inference Pipeline
+
+### Architecture: Inference-Only, No Training
+
+CityAtlas implements a **deterministic, rule-based inference pipeline** - there is no ML model training or hosting. This is pure inference logic.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                        AI INFERENCE PIPELINE ARCHITECTURE                            │
+│                                                                                      │
+│   ┌──────────────┐                                                                  │
+│   │ City Entity  │                                                                  │
+│   │ (raw data)   │                                                                  │
+│   └──────┬───────┘                                                                  │
+│          │                                                                           │
+│          ▼                                                                           │
+│   ╔═════════════════════════════════════════════════════════════════════════════╗   │
+│   ║ STAGE 1: INPUT PREPARATION                                                  ║   │
+│   ╠═════════════════════════════════════════════════════════════════════════════╣   │
+│   ║ Service: PromptBuilder                                                      ║   │
+│   ║ Action:  Transform City → CityFeatureInput                                  ║   │
+│   ║ Output:  Structured, typed feature vectors                                  ║   │
+│   ╚════════════════════════════════════════════════════════════════════════╤════╝   │
+│                                                                             │        │
+│                                                                             ▼        │
+│   ╔═════════════════════════════════════════════════════════════════════════════╗   │
+│   ║ STAGE 2: RULE-BASED INFERENCE                                               ║   │
+│   ╠═════════════════════════════════════════════════════════════════════════════╣   │
+│   ║ Service: AiInferenceService                                                 ║   │
+│   ║ Logic:   if/then rules based on score thresholds                            ║   │
+│   ║          - Economy >= 60 → "Strong job market"                              ║   │
+│   ║          - Livability >= 60 → "Good quality of life"                        ║   │
+│   ║          - Sustainability < 40 → "Environmental concerns"                   ║   │
+│   ║ Output:  Generated personality, strengths, weaknesses, audience             ║   │
+│   ╚════════════════════════════════════════════════════════════════════╤════╝   │
+│                                                                             │        │
+│                                                                             ▼        │
+│   ╔═════════════════════════════════════════════════════════════════════════════╗   │
+│   ║ STAGE 3: OUTPUT VALIDATION                                                  ║   │
+│   ╠═════════════════════════════════════════════════════════════════════════════╣   │
+│   ║ Service: PromptConstraints.validateOutput()                                 ║   │
+│   ║ Checks:  - Personality length <= 500 chars                                  ║   │
+│   ║          - Strengths count: 2-6                                              ║   │
+│   ║          - Weaknesses count: 1-5                                             ║   │
+│   ║          - Audience count: 2-6                                               ║   │
+│   ║          - No forbidden topics                                               ║   │
+│   ╚════════════════════════════════════════════════════════════════════╤════╝   │
+│                                                                             │        │
+│                                                                             ▼        │
+│   ╔═════════════════════════════════════════════════════════════════════════════╗   │
+│   ║ STAGE 4: RESPONSE PACKAGING                                                 ║   │
+│   ╠═════════════════════════════════════════════════════════════════════════════╣   │
+│   ║ Output:  InferenceResult (JSON)                                             ║   │
+│   ║          - personality, strengths, weaknesses, bestSuitedFor                ║   │
+│   ║          - confidence (0-1), inferenceTimeMs                                ║   │
+│   ║          - valid: true/false, validationErrors                              ║   │
+│   ╚════════════════════════════════════════════════════════════════════╤════╝   │
+│                                                                             │        │
+│                                                                             ▼        │
+│   ┌──────────────┐                                                                  │
+│   │ API Response │                                                                  │
+│   │    (JSON)    │                                                                  │
+│   └──────────────┘                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Pipeline Characteristics
+
+| Aspect | Implementation |
+|--------|----------------|
+| **Model Type** | Rule-based (no ML models) |
+| **Training** | N/A - no training phase |
+| **Hosting** | N/A - no model servers |
+| **Inference** | Deterministic if/then rules |
+| **Latency** | Sub-millisecond (pure Java) |
+| **Testability** | 100% unit testable |
+
+### Inference Rules Examples
+
+```java
+// RULE: Generate personality
+if (economyScore >= 80) {
+    return "thriving economic hub with exceptional opportunities";
+} else if (economyScore >= 60) {
+    return "strong economy with diverse job market";
+}
+
+// RULE: Classify strengths
+if (economyScore >= 60) {
+    strengths.add("Strong economy (score: " + economyScore + "/100)");
+}
+
+// RULE: Identify audience
+if (economyScore >= 60 && livabilityScore >= 60) {
+    audiences.add("Remote workers seeking work-life balance");
+}
+```
+
+### Pipeline Output Schema
+
+```json
+{
+  "citySlug": "san-francisco",
+  "personality": "San Francisco is a thriving economic hub...",
+  "strengths": [
+    "Excellent economy with diverse opportunities (score: 85/100)",
+    "Good quality of life with amenities (score: 68/100)"
+  ],
+  "weaknesses": [
+    "High cost of living presents challenges (score: 35/100)"
+  ],
+  "bestSuitedFor": [
+    "Career-focused professionals seeking strong job markets",
+    "Remote workers seeking work-life balance"
+  ],
+  "confidence": 0.85,
+  "inferenceTimeMs": 12,
+  "pipelineVersion": "1.0.0",
+  "valid": true,
+  "validationErrors": null
+}
+```
+
+### Modularity & Testing
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ TESTABLE COMPONENTS                                                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  PromptBuilder                      AiInferenceService                      │
+│  ├── buildFeatureInput()            ├── generatePersonality()               │
+│  ├── buildEconomyFeatures()         ├── generateStrengths()                 │
+│  └── buildDataQuality()             ├── generateWeaknesses()                │
+│                                     └── generateAudienceSegments()          │
+│                                                                              │
+│  Each method is independently unit-testable with mocked inputs              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Testing Strategy**:
+- **Unit Tests**: Test each rule in isolation (e.g., "economy score 65 → generates correct strength")
+- **Integration Tests**: Test full pipeline with sample cities
+- **Validation Tests**: Verify output always meets constraints
+- **Regression Tests**: Ensure determinism (same input → same output)
+
+---
+
+## AI Prompt Engineering
+
+### Fixed Template Structure
+
+CityAtlas uses **production-ready prompt templates** with a standardized 4-section structure ensuring determinism, safety, and auditability.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                          PROMPT TEMPLATE STRUCTURE                                   │
+│                                                                                      │
+│   SECTION 1: CONTEXT                                                                 │
+│   ┌─────────────────────────────────────────────────────────────────────────────┐   │
+│   │ • City identification (name, country, population)                            │   │
+│   │ • Task description (what AI should generate)                                 │   │
+│   │ • Role definition (perspective to take)                                      │   │
+│   └─────────────────────────────────────────────────────────────────────────────┘   │
+│                                      ↓                                               │
+│   SECTION 2: FEATURE SUMMARY                                                         │
+│   ┌─────────────────────────────────────────────────────────────────────────────┐   │
+│   │ • Economy: score, tier, GDP, unemployment, cost of living                    │   │
+│   │ • Livability: score, tier, components                                        │   │
+│   │ • Sustainability: score, tier, AQI, components                               │   │
+│   │ • Growth: score, tier, components                                            │   │
+│   │ • Overall: weighted assessment, confidence                                   │   │
+│   └─────────────────────────────────────────────────────────────────────────────┘   │
+│                                      ↓                                               │
+│   SECTION 3: CONSTRAINTS                                                             │
+│   ┌─────────────────────────────────────────────────────────────────────────────┐   │
+│   │ • Determinism: same input → same output                                      │   │
+│   │ • Safety: forbidden topics list                                              │   │
+│   │ • Boundaries: min/max for arrays, max length for text                        │   │
+│   │ • Attribution: all claims must reference source scores                       │   │
+│   └─────────────────────────────────────────────────────────────────────────────┘   │
+│                                      ↓                                               │
+│   SECTION 4: OUTPUT FORMAT                                                           │
+│   ┌─────────────────────────────────────────────────────────────────────────────┐   │
+│   │ • Expected JSON/text structure                                               │   │
+│   │ • Field descriptions and examples                                            │   │
+│   │ • Validation rules                                                           │   │
+│   └─────────────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Available Templates
+
+| Template ID | Purpose | Output |
+|-------------|---------|--------|
+| `CITY_PERSONALITY_001` | Generate city personality | 2-4 sentences |
+| `CITY_STRENGTHS_001` | List city strengths | 2-6 items (scores ≥ 60) |
+| `CITY_WEAKNESSES_001` | List city challenges | 1-5 items (scores < 40) |
+| `CITY_AUDIENCE_001` | Best-suited-for audience | 2-6 segments |
+| `CITY_COMPLETE_SUMMARY_001` | Full AI summary | Complete JSON object |
+
+### Structured Input System
+
+```java
+// Type-safe input structure
+CityFeatureInput input = CityFeatureInput.builder()
+    .cityIdentifier(CityIdentifier.builder()
+        .slug("san-francisco")
+        .name("San Francisco")
+        .country("USA")
+        .population(874961L)
+        .build())
+    .economyFeatures(EconomyFeatures.builder()
+        .economyScore(82.5)
+        .economyTier("excellent")
+        .gdpPerCapita(95000.0)
+        .build())
+    .build();
+
+// Render using template
+String prompt = PromptTemplates.CITY_PERSONALITY.render(input);
+```
+
+### Constraint Definitions
+
+```java
+// Determinism: Same input always produces identical output
+DeterminismRules.DEFAULT = {
+    useFixedSeed: true,
+    randomSeed: 42,
+    useTemperatureZero: true
+};
+
+// Safety: Topics that MUST NOT appear in output
+FORBIDDEN_TOPICS = {
+    "political opinions", "religious views", "stereotypes",
+    "speculation without data", "comparative rankings without basis"
+};
+
+// Boundaries: Strict limits on output
+OutputBoundaries.DEFAULT = {
+    maxPersonalityLength: 500,
+    minStrengths: 2, maxStrengths: 6,
+    minWeaknesses: 1, maxWeaknesses: 5,
+    minAudienceItems: 2, maxAudienceItems: 6
+};
+```
+
+### Score-Based Generation Rules
+
+| Condition | Action |
+|-----------|--------|
+| Score ≥ 80 | Include as "Excellent" strength |
+| Score 60-79 | Include as "Good" strength |
+| Score 40-59 | Do not include in strengths or weaknesses |
+| Score 20-39 | Include as "Below Average" challenge |
+| Score < 20 | Include as "Poor" challenge (prioritize) |
+
+📄 **Full documentation**: [backend/AI_PROMPTS.md](backend/AI_PROMPTS.md)
+
+---
+
 ## Explainable AI Framework
 
 ### Why Explainability Matters
@@ -700,6 +967,408 @@ CityAtlas implements **transparent, interview-justifiable AI** through a three-l
 | `ReasonedConclusion` | Strength/weakness with justification | Nested in DTO |
 | `ScoreBreakdown` | Component-level score breakdown | Nested in DTO |
 | `ReasoningChain` | Rule → Evidence → Inference steps | Nested in DTO |
+
+---
+
+## AI Quality Safeguards
+
+### Overview
+
+The AI system includes comprehensive quality checks to prevent misleading summaries and ensure reliable outputs:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    AI QUALITY SAFEGUARD PIPELINE                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+INPUT: City Data
+      ↓
+┌─────────────────────┐
+│  Quality Guard      │  ← Blocks inference if data insufficient
+│  - Detect missing   │
+│  - Check patterns   │
+│  - Edge cases       │
+└──────────┬──────────┘
+           ↓ [PASS/BLOCK]
+┌─────────────────────┐
+│ Data Quality Check  │  ← Validates completeness & correctness
+│ - Score validation  │
+│ - Field completeness│
+│ - Unrealistic values│
+└──────────┬──────────┘
+           ↓
+┌─────────────────────┐
+│ Inference Rules     │  ← Generates insights
+└──────────┬──────────┘
+           ↓
+┌─────────────────────┐
+│ Confidence Calc     │  ← Scores reliability (0-100%)
+│ - Data: 40%         │
+│ - Patterns: 30%     │
+│ - Inference: 30%    │
+└──────────┬──────────┘
+           ↓
+┌─────────────────────┐
+│ Decision Logger     │  ← Audits AI decisions
+│ - What rules fired  │
+│ - Why outputs made  │
+│ - Confidence level  │
+└─────────────────────┘
+```
+
+### Quality Safeguard Components
+
+| Component | Purpose | Action |
+|-----------|---------|--------|
+| **DataQualityChecker** | Detects missing/weak data | Calculates completeness (0-100%) |
+| **AiQualityGuard** | Pre-inference validation | BLOCKS inference if data insufficient |
+| **ConfidenceCalculator** | Scores output reliability | Returns HIGH/MEDIUM/LOW confidence |
+| **AiDecisionLogger** | Audit trail | Logs every rule + decision for debugging |
+
+### Quality Check Examples
+
+**1. Missing Data Detection**
+```java
+Input: City with null population, missing GDP
+Result: 
+  - Completeness: 65%
+  - Warnings: ["Missing population data", "Missing GDP per capita"]
+  - Action: Inference proceeds with caveats
+```
+
+**2. Suspicious Patterns (BLOCKED)**
+```java
+Input: All feature scores = 50.0 (identical)
+Result:
+  - Blocker: "All feature scores are identical - likely placeholder data"
+  - Action: Inference BLOCKED, no output generated
+```
+
+**3. Confidence Scoring**
+```java
+Input: City with 95% complete data, reliable score patterns
+Result:
+  - Overall Confidence: 87% (HIGH)
+  - Breakdown: Data=95%, Patterns=85%, Inference=90%
+  - Reasoning: "HIGH confidence: Data completeness 95%. Output is highly reliable."
+```
+
+**4. Audit Logging**
+```java
+[INFO] Audit 8f3a12b7: San Francisco, USA - Confidence: HIGH (87.2%), Rules: 8, Time: 12ms
+[DEBUG] Rule: Economy >= 80 (actual: 85.0) -> "Excellent economy with robust job market" (STRENGTH)
+[DEBUG] Rule: Economy >= 60 AND Livability >= 60 (actual: 85.0, 70.0) -> "Remote workers" (AUDIENCE)
+```
+
+### Confidence Level Thresholds
+
+| Level | Score Range | Meaning | Action |
+|-------|-------------|---------|--------|
+| **HIGH** | 80-100% | Highly reliable, complete data | Use without hesitation |
+| **MEDIUM** | 60-79% | Generally reliable with minor gaps | Use with noted caveats |
+| **LOW** | 0-59% | Significant data limitations | Use cautiously, highlight limitations |
+
+### Prevented Issues
+
+**Quality guards prevent:**
+- ❌ All-zero scores (placeholder data)
+- ❌ Identical scores across all features (suspicious)
+- ❌ Out-of-range values (economy = 150)
+- ❌ Missing critical fields (no city name)
+- ❌ Negative populations or GDP
+
+**Audit logging captures:**
+- ✅ Every rule that fired
+- ✅ Input data used for each decision
+- ✅ Confidence score breakdown
+- ✅ Validation pass/fail status
+- ✅ Inference time in milliseconds
+
+### Interview Talking Points
+
+**"How do you prevent misleading AI summaries?"**
+- "We have a pre-inference Quality Guard that BLOCKS inference if data is insufficient"
+- "All scores must be in valid ranges (0-100), non-null for critical fields"
+- "We detect suspicious patterns like identical scores or all-perfect scores"
+- "If data completeness < 30%, inference is blocked entirely"
+
+**"How do you measure AI confidence?"**
+- "Confidence is a weighted score: 40% data completeness, 30% pattern reliability, 30% inference strength"
+- "HIGH (80%+) = reliable output, MEDIUM (60-79%) = use with caveats, LOW (<60%) = caution required"
+- "Confidence reasoning is human-readable: 'Data completeness 95%. Output is highly reliable.'"
+
+**"How do you audit AI decisions?"**
+- "Every inference is logged with a unique audit ID"
+- "We log which rules fired, what inputs were used, and what outputs were generated"
+- "Example: 'Rule: Economy >= 80 (actual: 85.0) → Excellent economy (STRENGTH)'"
+- "All logs are structured for searchability and debugging"
+
+---
+
+## AI Graceful Fallbacks
+
+### Overview
+
+The fallback system ensures **graceful degradation** when AI inference cannot complete normally. Users always receive useful output—never broken UX.
+
+### Fallback Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                    AI FALLBACK SYSTEM - TIERED DEGRADATION                           │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+
+    PRIMARY INFERENCE
+          │
+          ▼
+    ┌─────────────────┐
+    │ Inference OK?   │──Yes──▶ Return Normal Response (Full confidence)
+    └────────┬────────┘
+             │ No (blocked, low confidence, or error)
+             ▼
+    ┌─────────────────────────────────────────────────────────────────────────────┐
+    │ TIER 1: PARTIAL DATA FALLBACK (≥50% data available)                         │
+    │                                                                              │
+    │ • Generate insights from available data only                                 │
+    │ • Add explicit caveats: "Economic data not available for analysis"          │
+    │ • Show confidence score (typically 50-70%)                                   │
+    │ • User message: "Analysis based on partial data. Some insights may be limited." │
+    └────────┬────────────────────────────────────────────────────────────────────┘
+             │ Not enough data
+             ▼
+    ┌─────────────────────────────────────────────────────────────────────────────┐
+    │ TIER 2: METADATA ONLY FALLBACK (name, country, population available)        │
+    │                                                                              │
+    │ • Generate generic description from metadata                                 │
+    │ • No specific claims about economy, livability, etc.                         │
+    │ • Confidence: 15-30%                                                         │
+    │ • User message: "Limited information available. Showing general overview."   │
+    └────────┬────────────────────────────────────────────────────────────────────┘
+             │ Nothing useful
+             ▼
+    ┌─────────────────────────────────────────────────────────────────────────────┐
+    │ TIER 3: SAFE DEFAULT FALLBACK (guaranteed to never fail)                    │
+    │                                                                              │
+    │ • Generic, safe message: "This city awaits your discovery."                 │
+    │ • No weaknesses shown (no data to support claims)                           │
+    │ • Confidence: 0%                                                             │
+    │ • User message: "Check back later for detailed information."                 │
+    └─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Fallback Triggers
+
+| Trigger Condition | Fallback Tier | Reason |
+|-------------------|---------------|--------|
+| Quality Guard blocks (data <30%) | Tier 1 or 2 | Insufficient data for reliable inference |
+| Confidence score < 40% | Tier 1 | Low reliability - add warnings |
+| External APIs unavailable | Tier 2 | Use cached database data only |
+| Any exception during inference | Tier 3 | Prevent error exposure to users |
+| City entity is null | Tier 3 | Nothing to work with |
+
+### Fallback Response Structure
+
+```java
+// Every fallback returns the same structure as normal responses
+FallbackResponse {
+    FallbackTier tier;           // TIER_1, TIER_2, or TIER_3
+    FallbackReason reason;       // INCOMPLETE_DATA, LOW_CONFIDENCE, API_UNAVAILABLE, INFERENCE_ERROR
+    
+    String personality;          // Always populated, never null
+    List<String> strengths;      // Minimum 1 item, never empty
+    List<String> weaknesses;     // May be empty in Tier 2/3
+    List<String> audienceSegments;
+    
+    Double confidence;           // 0-100, lower for higher tiers
+    List<String> caveats;        // Explicit warnings about limitations
+    Map<String, String> dataAvailability;  // What was/wasn't available
+    String userMessage;          // Friendly explanation for users
+}
+```
+
+### Example: Low Confidence Fallback
+
+**Scenario**: City has 45% data completeness, confidence below threshold
+
+```json
+{
+  "tier": "TIER_1_PARTIAL_DATA",
+  "reason": "LOW_CONFIDENCE",
+  "personality": "Berlin offers a distinctive urban experience. (Note: This assessment is based on limited data and should be considered preliminary.)",
+  "strengths": ["Economic indicators show positive trends", "Quality of life metrics are favorable"],
+  "weaknesses": [],
+  "caveats": [
+    "Some data fields are missing or incomplete",
+    "Environmental data not available for analysis"
+  ],
+  "confidence": 35.0,
+  "userMessage": "Our analysis has lower confidence due to limited data. Results should be verified."
+}
+```
+
+### Key Design Principles
+
+1. **Never return null**: All fallback responses are valid, renderable objects
+2. **Transparency**: Caveats clearly explain what data was missing/limited
+3. **Graceful degradation**: Each tier provides less detail but still useful information
+4. **No broken UX**: Frontend can render ANY response without special handling
+5. **Security**: Internal errors are logged but never exposed to users
+
+---
+
+## AI File Structure
+
+### Complete AI System Files
+
+```
+backend/src/main/java/com/cityatlas/backend/ai/
+│
+├── 📄 CityFeatureInput.java          # Structured input schema (typed feature vectors)
+│   └── Records: CityIdentifier, EconomyFeatures, LivabilityFeatures, etc.
+│
+├── 📄 PromptBuilder.java             # City → CityFeatureInput transformer
+│   └── Methods: buildFeatureInput(), buildEconomyFeatures(), buildDataQuality()
+│
+├── 📄 PromptTemplate.java            # Template structure with 4-section format
+│   └── Sections: Context, Feature Summary, Constraints, Output Format
+│
+├── 📄 PromptTemplates.java           # Pre-built production templates
+│   └── Templates: CITY_PERSONALITY, CITY_STRENGTHS, CITY_COMPLETE_SUMMARY
+│
+├── 📄 PromptConstraints.java         # Safety, determinism, and boundary rules
+│   └── Classes: DeterminismRules, SafetyRules, OutputBoundaries, Thresholds
+│
+├── 📄 AiInferencePipeline.java       # Pipeline DTOs (InferenceInsights, InferenceResult)
+│   └── Records: InferenceInsights, InferenceResult (final API output)
+│
+├── 📄 AiInferenceService.java        # Main inference orchestrator (7-stage pipeline)
+│   └── Methods: runInference(), applyInferenceRules(), validateOutput()
+│
+├── 📄 DataQualityChecker.java        # Data completeness and validity checks
+│   └── Methods: validateData(), checkCompleteness(), detectIssues()
+│
+├── 📄 AiQualityGuard.java            # Pre-inference validation gate
+│   └── Methods: validateForInference(), checkForMisleadingPatterns()
+│
+├── 📄 ConfidenceCalculator.java      # Weighted confidence scoring (40/30/30)
+│   └── Methods: calculateConfidence(), determineLevel(), generateReasoning()
+│
+├── 📄 AiDecisionLogger.java          # Audit logging for AI decisions
+│   └── Methods: logInference(), identifyStrengthRule(), createAuditLog()
+│
+└── 📄 AiFallbackService.java         # Graceful degradation system
+    └── Methods: handleIncompleteData(), handleLowConfidence(), handleApiUnavailable()
+```
+
+### Test Files
+
+```
+backend/src/test/java/com/cityatlas/backend/ai/
+│
+├── 📄 AiInferenceServiceTest.java    # Pipeline integration tests
+├── 📄 DataQualityCheckerTest.java    # Data validation tests
+├── 📄 AiQualityGuardTest.java        # Quality gate tests
+└── 📄 AiFallbackServiceTest.java     # Fallback scenario tests
+```
+
+### Related Documentation
+
+| File | Purpose |
+|------|---------|
+| [backend/AI_PROMPTS.md](backend/AI_PROMPTS.md) | Prompt engineering documentation |
+| This README | Architecture and interview preparation |
+
+---
+
+## AI System Architecture Summary
+
+### Complete AI Pipeline Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                    CITYATLAS AI SYSTEM - END-TO-END FLOW                             │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+
+   ┌────────────────────────────────────────────────────────────────────────────┐
+   │ INPUT: City Entity (raw data)                                              │
+   └────────────┬───────────────────────────────────────────────────────────────┘
+                │
+                ▼
+   ╔════════════════════════════════════════════════════════════════════════════╗
+   ║ LAYER 1: FEATURE ENGINEERING                                               ║
+   ╠════════════════════════════════════════════════════════════════════════════╣
+   ║ Service: CityFeatureComputer                                               ║
+   ║ Input:   GDP, unemployment, cost of living, AQI                            ║
+   ║ Logic:   Min-max normalization, weighted scoring                           ║
+   ║ Output:  Economy: 85/100, Livability: 68/100, etc.                        ║
+   ╚════════════════════════════════════════════════════════════════════╤═══════╝
+                                                                        │
+                                                                        ▼
+   ╔════════════════════════════════════════════════════════════════════════════╗
+   ║ LAYER 2: STRUCTURED INPUT PREPARATION                                      ║
+   ╠════════════════════════════════════════════════════════════════════════════╣
+   ║ Service: PromptBuilder                                                     ║
+   ║ Input:   City + ScoreResults                                               ║
+   ║ Logic:   Transform to CityFeatureInput (typed, validated)                 ║
+   ║ Output:  Structured feature vectors with metadata                         ║
+   ╚════════════════════════════════════════════════════════════════════╤═══════╝
+                                                                        │
+                                                                        ▼
+   ╔════════════════════════════════════════════════════════════════════════════╗
+   ║ LAYER 3: RULE-BASED INFERENCE                                              ║
+   ╠════════════════════════════════════════════════════════════════════════════╣
+   ║ Service: AiInferenceService                                                ║
+   ║ Logic:   if (economyScore >= 80) → "Excellent economy"                    ║
+   ║          if (livabilityScore < 40) → "Quality of life concerns"           ║
+   ║ Output:  Generated insights (personality, strengths, weaknesses)          ║
+   ╚════════════════════════════════════════════════════════════════════╤═══════╝
+                                                                        │
+                                                                        ▼
+   ╔════════════════════════════════════════════════════════════════════════════╗
+   ║ LAYER 4: EXPLAINABILITY LAYER                                              ║
+   ╠════════════════════════════════════════════════════════════════════════════╣
+   ║ Service: AiExplainabilityEngine                                            ║
+   ║ Logic:   Attach reasoning chains to each conclusion                       ║
+   ║          - Rule that triggered: "GDP > $60K"                               ║
+   ║          - Evidence: "GDP = $85K"                                          ║
+   ║          - Contribution: "Economy score 85, GDP contributed 34 pts"       ║
+   ║ Output:  ExplainableAiSummary with full audit trail                       ║
+   ╚════════════════════════════════════════════════════════════════════╤═══════╝
+                                                                        │
+                                                                        ▼
+   ╔════════════════════════════════════════════════════════════════════════════╗
+   ║ LAYER 5: OUTPUT VALIDATION                                                 ║
+   ╠════════════════════════════════════════════════════════════════════════════╣
+   ║ Service: PromptConstraints.validateOutput()                                ║
+   ║ Checks:  - Personality length <= 500 chars                                 ║
+   ║          - Strengths count: 2-6                                             ║
+   ║          - No forbidden topics                                              ║
+   ║          - All score attributions present                                   ║
+   ╚════════════════════════════════════════════════════════════════════╤═══════╝
+                                                                        │
+                                                                        ▼
+   ┌────────────────────────────────────────────────────────────────────────────┐
+   │ OUTPUT: AiCitySummaryDTO (JSON API response)                               │
+   └────────────────────────────────────────────────────────────────────────────┘
+```
+
+### AI System Components
+
+| Layer | Component | Type | Testable? |
+|-------|-----------|------|-----------|
+| **1. Feature Engineering** | `CityFeatureComputer` | Deterministic scorer | ✅ Unit tests |
+| **2. Input Preparation** | `PromptBuilder` | Data transformer | ✅ Unit tests |
+| **3. Inference** | `AiInferenceService` | Rule engine | ✅ Unit tests |
+| **4. Explainability** | `AiExplainabilityEngine` | Reasoning generator | ✅ Unit tests |
+| **5. Validation** | `PromptConstraints` | Output validator | ✅ Unit tests |
+
+### Key Design Principles
+
+1. **No ML Models**: Pure rule-based system (no training, no model hosting)
+2. **Deterministic**: Same input always produces identical output
+3. **Explainable**: Every conclusion traces back to data + rule
+4. **Modular**: Each layer is independently testable
+5. **Type-Safe**: Strongly typed throughout (no raw strings)
 
 ---
 
@@ -892,6 +1561,183 @@ npm run dev
 
 ## Interview Talking Points
 
+### AI System Deep Dive (Interview Ready)
+
+CityAtlas implements a **production-grade, rule-based AI system** for city analysis. Key distinction: **this is NOT machine learning**—it's deterministic, explainable, and auditable.
+
+#### AI Architecture At-a-Glance
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    CITYATLAS AI - INTERVIEW SUMMARY                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  WHAT IT IS:                           WHAT IT'S NOT:
+  ✅ Rule-based inference               ❌ Machine learning model
+  ✅ Deterministic scoring              ❌ Training pipeline
+  ✅ Explainable conclusions            ❌ Black-box predictions
+  ✅ Auditable decision logs            ❌ Model hosting/serving
+
+  PIPELINE:
+  ┌─────────┐   ┌─────────┐   ┌─────────┐   ┌─────────┐   ┌─────────┐
+  │ Feature │──▶│ Quality │──▶│ Rule    │──▶│Explain- │──▶│Fallback │
+  │Engineer │   │ Guard   │   │ Engine  │   │ability  │   │ Handler │
+  └─────────┘   └─────────┘   └─────────┘   └─────────┘   └─────────┘
+     Scores       BLOCK/        if/then      Reasoning    Graceful
+    (0-100)       PASS          rules        chains       degradation
+```
+
+#### 1. Feature Engineering (`CityFeatureComputer`)
+
+**What it does**: Transforms raw city data into normalized, comparable scores.
+
+```java
+// Example: Economy score computation
+economyScore = (GDP_normalized × 0.40) + (Unemployment_inverted × 0.60)
+
+// Normalization strategy:
+GDP: $15K-$150K → 0-100 (higher is better)
+Unemployment: 2%-15% → 100-0 (INVERTED: lower is better)
+AQI: 0-200 → 100-0 (INVERTED: lower pollution = higher score)
+```
+
+**Interview Point**: *"I implemented inverse scaling for metrics where lower is better—unemployment, pollution, cost of living. This ensures all scores are directionally consistent: higher always means better."*
+
+#### 2. Quality Guard (`AiQualityGuard`)
+
+**What it does**: Pre-inference validation that BLOCKS bad data from generating misleading insights.
+
+| Check | Trigger | Action |
+|-------|---------|--------|
+| Data completeness < 30% | Insufficient information | ❌ BLOCK inference |
+| All scores identical | Likely placeholder data | ❌ BLOCK inference |
+| Scores out of range (>100 or <0) | Invalid data | ⚠️ Warning + continue |
+| Critical field missing (city name) | Cannot identify subject | ❌ BLOCK inference |
+
+**Interview Point**: *"The quality guard ensures we never generate summaries from garbage data. If a city has only 25% complete data or suspiciously identical scores, inference is blocked entirely rather than producing misleading insights."*
+
+#### 3. Rule-Based Inference (`AiInferenceService`)
+
+**What it does**: Applies deterministic if/then rules to generate insights.
+
+```java
+// Example rules:
+if (economyScore >= 80) {
+    personality = "thriving economic powerhouse";
+    strengths.add("Exceptional job market with high salaries");
+    audiences.add("Career-focused professionals");
+}
+
+if (livabilityScore < 40) {
+    weaknesses.add("Quality of life challenges");
+}
+
+if (economyScore >= 60 && sustainabilityScore >= 60) {
+    audiences.add("Environmentally conscious professionals");
+}
+```
+
+**Interview Point**: *"Every conclusion traces back to a specific rule with specific thresholds. If a user asks 'why did you say the economy is strong?', I can point to exact code: economyScore (85) exceeded threshold (80)."*
+
+#### 4. Explainability Engine (`AiExplainabilityEngine`)
+
+**What it does**: Attaches reasoning chains to every conclusion.
+
+```json
+{
+  "conclusion": "Strong job market with high incomes",
+  "reasoning": {
+    "rule": "GDP per capita > $60,000",
+    "evidence": "GDP = $95,000",
+    "contribution": "Economy score: 85, GDP contributed 38 points"
+  },
+  "inferenceSteps": [
+    "GDP per capita is $95,000",
+    "$95,000 exceeds $60,000 prosperity threshold",
+    "Therefore: City has a prosperous economy"
+  ]
+}
+```
+
+**Interview Point**: *"This is interview-justifiable AI. I can explain every single output: what data triggered it, what rule was applied, and how much each component contributed to the final score."*
+
+#### 5. Graceful Fallbacks (`AiFallbackService`)
+
+**What it does**: Ensures users ALWAYS get useful output, even when things fail.
+
+```
+PRIMARY INFERENCE
+      │
+      ▼
+┌─────────────────┐
+│ Inference OK?   │──Yes──▶ Return Normal Response
+└────────┬────────┘
+         │ No
+         ▼
+┌─────────────────┐
+│ TIER 1 FALLBACK │ ← Partial data available (≥50%)
+│ • Use what we have │   "Based on available data..."
+│ • Add caveats    │   with clear warnings
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ TIER 2 FALLBACK │ ← Only metadata (name, country)
+│ • Generic description │ "Paris, France is a city..."
+│ • No claims without data │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ TIER 3 FALLBACK │ ← Nothing useful available
+│ • Safe message   │  "Check back later"
+│ • Never fails    │  Never returns null
+└─────────────────┘
+```
+
+**Fallback Triggers**:
+| Condition | Response |
+|-----------|----------|
+| Quality guard blocked | Tier 1: Use partial data with caveats |
+| Confidence < 40% | Tier 1: Full insights + "preliminary" warning |
+| External APIs down | Tier 2: Use cached database data |
+| Any exception | Tier 3: Safe generic message |
+
+**Interview Point**: *"The system never fails silently or shows broken UI. If confidence is low, we still show insights but with clear warnings. If APIs are down, we use cached data. If everything fails, we show a friendly 'try again later' message. Users always see something useful."*
+
+#### 6. Confidence Scoring (`ConfidenceCalculator`)
+
+**What it does**: Quantifies how reliable the AI output is.
+
+```
+Confidence = (Data Completeness × 40%) 
+           + (Pattern Reliability × 30%) 
+           + (Inference Strength × 30%)
+
+Levels:
+• HIGH (80-100%): "Output is highly reliable"
+• MEDIUM (60-79%): "Generally reliable with minor gaps"  
+• LOW (<60%): "Use with caution, significant limitations"
+```
+
+**Interview Point**: *"Confidence isn't a magic number—it's a weighted formula combining data completeness, pattern reliability, and inference strength. Users see exactly why confidence is what it is."*
+
+#### 7. Audit Logging (`AiDecisionLogger`)
+
+**What it does**: Creates full audit trail for every AI decision.
+
+```
+[INFO] Audit 8f3a12b7: San Francisco, USA - Confidence: HIGH (87.2%)
+[DEBUG] Rules fired: 8, Inference time: 12ms
+[DEBUG] → Rule: Economy >= 80 (actual: 85.0) = "Excellent economy" [STRENGTH]
+[DEBUG] → Rule: Sustainability < 40 (actual: 38.5) = "Environmental concerns" [WEAKNESS]
+[DEBUG] → Rule: Economy >= 60 AND Livability >= 60 = "Remote workers" [AUDIENCE]
+```
+
+**Interview Point**: *"Every inference is logged with a unique audit ID. If a user disputes a summary, I can trace exactly which rules fired, what inputs were used, and when it was generated."*
+
+---
+
 ### 60-Second Architecture Pitch
 
 > *"CityAtlas is a production-grade data engineering platform built with a Lambda architecture. The **streaming path** uses Kafka with micro-batching—accumulating 100 events or flushing every 10 seconds—to achieve sub-second latency for real-time dashboards. The **batch path** runs scheduled ETL jobs that transform raw data into a star schema, enabling 10x faster analytical queries.*
@@ -913,6 +1759,8 @@ npm run dev
 
 ### Questions I Can Answer
 
+#### Data Engineering Questions
+
 1. **"How do you handle out-of-order events in Kafka?"**
    > Partition by `citySlug` ensures per-city ordering. Cross-city ordering uses event timestamps with watermarking.
 
@@ -927,6 +1775,29 @@ npm run dev
 
 5. **"Why star schema over normalized tables?"**
    > Optimized for analytical reads (GROUP BY, aggregations). Denormalization trades storage for query speed. OLTP stays normalized for writes.
+
+#### AI/ML Engineering Questions
+
+6. **"Why rule-based AI instead of machine learning?"**
+   > *"For city assessments, explainability is paramount. Users need to trust and verify conclusions. Rule-based systems provide: (1) deterministic, auditable results, (2) no black-box models that can't explain decisions, (3) easy updates as domain knowledge evolves, (4) no model training/hosting overhead."*
+
+7. **"How do you ensure AI outputs are explainable?"**
+   > *"Every conclusion includes: (1) the input data that triggered it (GDP = $85K), (2) the rule applied (GDP > $60K → 'prosperous'), (3) the feature contribution (GDP contributed 32/100 to economy score), and (4) a human-readable explanation for end users."*
+
+8. **"How do you handle incomplete or low-quality data in AI?"**
+   > *"Multi-layer defense: (1) Quality Guard blocks inference if data <30% complete or shows suspicious patterns, (2) Confidence Calculator scores reliability 0-100%, (3) Fallback Service provides graceful degradation—Tier 1 uses partial data with caveats, Tier 2 uses metadata only, Tier 3 is a safe default that never fails."*
+
+9. **"What's your confidence calculation methodology?"**
+   > *"Weighted formula: 40% data completeness (are fields populated?), 30% pattern reliability (are scores in realistic ranges?), 30% inference strength (did rules produce meaningful insights?). HIGH ≥80%, MEDIUM 60-79%, LOW <60%. Each level has specific guidance."*
+
+10. **"How do you audit AI decisions?"**
+    > *"Every inference logs: unique audit ID, city/country, confidence level, rules fired, inputs used, outputs generated, and execution time. Logs are structured JSON for searchability. If a user disputes a summary, I can trace the exact decision path."*
+
+11. **"How do you prevent misleading AI summaries?"**
+    > *"Pre-inference Quality Guard that BLOCKS inference for: all-zero scores, identical scores across features, out-of-range values, missing critical fields. Combined with output validation: personality ≤500 chars, 2-6 strengths, 1-5 weaknesses, no forbidden topics."*
+
+12. **"What happens if the AI pipeline throws an exception?"**
+    > *"The fallback handler catches all exceptions and returns a Tier 3 safe response. Error details are logged internally but never exposed to users. They see a friendly 'We're having trouble analyzing this city right now. Please try again later.' message. The frontend can render this without special handling."*
 
 ---
 

@@ -21,7 +21,6 @@ export function Sidebar() {
   const navItems = [
     { label: 'Home', href: '/', icon: '🏠' },
     { label: 'All Cities', href: '/cities', icon: '🏙️' },
-    { label: 'Bookmarks', href: '/bookmarks', icon: '⭐', badge: bookmarkedCities.length },
     { label: 'Compare', href: '/compare', icon: '⚖️', badge: comparisonList.length },
   ];
 
