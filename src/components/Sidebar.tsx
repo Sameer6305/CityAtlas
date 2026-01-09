@@ -10,12 +10,11 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { useBookmarks, useComparison } from '@/store/useAppStore';
+import { useComparison } from '@/store/useAppStore';
 
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
-  const { bookmarkedCities } = useBookmarks();
   const { comparisonList } = useComparison();
 
   const navItems = [
