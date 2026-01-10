@@ -10,8 +10,9 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { TiltCard } from '@/components/TiltCard';
 
 export default function CitiesPage() {
   const router = useRouter();
@@ -244,18 +245,19 @@ export default function CitiesPage() {
             </div>
 
             {/* Cities Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-12" style={{ perspective: '1000px' }}>
               {filteredCities.map((city) => (
-                <Link
-                  key={city.slug}
-                  href={`/cities/${city.slug}`}
-                  className="group"
-                >
-                  <div className="backdrop-blur-md bg-white/[0.03] border border-white/10 p-6 hover:bg-white/[0.06] hover:border-white/20 transition-all duration-500 rounded-2xl hover:scale-[1.03] hover:-translate-y-2 hover:shadow-2xl hover:shadow-cyan-500/20 relative overflow-hidden group">
-                    {/* Gradient Background on Hover */}
-                    <div className={`absolute inset-0 bg-gradient-to-br ${city.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-700`} />
-                    {/* Subtle corner glow */}
-                    <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" style={{ background: `radial-gradient(circle, ${city.accentColor}20 0%, transparent 70%)` }} />
+                <TiltCard key={city.slug} maxTilt={12} scale={1.02}>
+                  <Link
+                    href={`/cities/${city.slug}`}
+                    prefetch={true}
+                    className="group block"
+                  >
+                    <div className="backdrop-blur-md bg-white/[0.03] border border-white/10 p-6 hover:bg-white/[0.06] hover:border-white/20 transition-all duration-300 rounded-2xl hover:shadow-2xl hover:shadow-cyan-500/20 relative overflow-hidden">
+                      {/* Gradient Background on Hover */}
+                      <div className={`absolute inset-0 bg-gradient-to-br ${city.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
+                      {/* Subtle corner glow */}
+                      <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `radial-gradient(circle, ${city.accentColor}20 0%, transparent 70%)` }} />
                     
                     {/* Content */}
                     <div className="relative z-10">
@@ -293,7 +295,8 @@ export default function CitiesPage() {
                       </div>
                     </div>
                   </div>
-                </Link>
+                  </Link>
+                </TiltCard>
               ))}
             </div>
 

@@ -14,9 +14,10 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useComparison } from '@/store/useAppStore';
+import { useTilt3D } from '@/lib/useTilt3D';
 
 // ============================================
 // TYPES
@@ -263,10 +264,11 @@ function useScrollAnimation(threshold = 0.1) {
   return { ref, isVisible };
 }
 
-// Glassmorphism card component
-function GlassCard({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+// Glassmorphism card component with 3D tilt effect
+function GlassCard({ children, className = '', delay = 0, enableTilt = true }: { children: React.ReactNode; className?: string; delay?: number; enableTilt?: boolean }) {
   const { ref, isVisible } = useScrollAnimation(0.1);
   const [isAnimated, setIsAnimated] = useState(false);
+  const tilt = useTilt3D({ maxTilt: 8, scale: 1.01, speed: 150, enabled: enableTilt });
   
   useEffect(() => {
     if (isVisible) {
@@ -277,8 +279,20 @@ function GlassCard({ children, className = '', delay = 0 }: { children: React.Re
 
   return (
     <div 
-      ref={ref}
-      className={`backdrop-blur-xl bg-white/[0.03] border border-white/[0.08] rounded-2xl transition-all duration-[800ms] ease-out hover:bg-white/[0.06] hover:border-white/[0.15] hover:shadow-2xl hover:shadow-cyan-500/10 ${isAnimated ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-12 scale-[0.97]'} ${className}`}
+      ref={(el) => {
+        // Combine refs
+        (ref as React.MutableRefObject<HTMLDivElement | null>).current = el;
+        (tilt.ref as React.MutableRefObject<HTMLDivElement | null>).current = el;
+      }}
+      className={`backdrop-blur-xl bg-white/[0.03] border border-white/[0.08] rounded-2xl transition-all duration-300 ease-out hover:bg-white/[0.06] hover:border-white/[0.15] hover:shadow-2xl hover:shadow-cyan-500/10 ${isAnimated ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'} ${className}`}
+      style={{
+        ...tilt.style,
+        transformStyle: 'preserve-3d',
+        willChange: 'transform',
+      }}
+      onMouseMove={tilt.onMouseMove}
+      onMouseEnter={tilt.onMouseEnter}
+      onMouseLeave={tilt.onMouseLeave}
     >
       {children}
     </div>

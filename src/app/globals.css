@@ -40,6 +40,31 @@
   .skeleton {
     @apply animate-pulse bg-surface-elevated rounded;
   }
+  
+  /* 3D Tilt Effect Utilities */
+  .tilt-card-wrapper {
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+  
+  .tilt-card-wrapper > * {
+    transform-style: preserve-3d;
+  }
+  
+  /* Smooth page transitions */
+  .page-transition {
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+  }
+  
+  .page-enter {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  
+  .page-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Custom Animations */

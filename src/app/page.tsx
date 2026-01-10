@@ -1,9 +1,11 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/store/useAppStore';
+import { TiltCard } from '@/components/TiltCard';
 
 export default function Home() {
   const router = useRouter();
@@ -202,18 +204,20 @@ export default function Home() {
         <section className="min-h-screen flex flex-col items-center justify-center px-6 pt-28 pb-12">
           <div className="text-center max-w-4xl mx-auto">
             
-            {/* App Icon in Glass Container */}
+            {/* App Icon in Glass Container with Tilt Effect */}
             <div className="mb-10 animate-fade-in-up">
-              <div className="inline-flex p-6 backdrop-blur-md bg-gradient-to-br from-blue-500/[0.08] to-cyan-500/[0.08] border border-white/[0.15] rounded-3xl shadow-lg hover:shadow-2xl hover:shadow-cyan-500/30 hover:border-cyan-400/40 transition-all duration-500 hover:scale-110 hover:-translate-y-2 cursor-pointer">
-                <Image 
-                  src="/logo.png" 
-                  alt="CityAtlas Logo" 
-                  width={90} 
-                  height={90} 
-                  className="rounded-2xl hover:rotate-6 transition-transform duration-500" 
-                  priority 
-                />
-              </div>
+              <TiltCard maxTilt={20} scale={1.08}>
+                <div className="inline-flex p-6 backdrop-blur-md bg-gradient-to-br from-blue-500/[0.08] to-cyan-500/[0.08] border border-white/[0.15] rounded-3xl shadow-lg hover:shadow-2xl hover:shadow-cyan-500/30 hover:border-cyan-400/40 transition-all duration-300 cursor-pointer">
+                  <Image 
+                    src="/logo.png" 
+                    alt="CityAtlas Logo" 
+                    width={90} 
+                    height={90} 
+                    className="rounded-2xl transition-transform duration-300" 
+                    priority 
+                  />
+                </div>
+              </TiltCard>
             </div>
 
             {/* Main Title with Gradient */}
@@ -231,26 +235,32 @@ export default function Home() {
               Explore cities as structured resumes with real-time data and AI-powered insights
             </p>
 
-            {/* CTA Buttons */}
+            {/* CTA Buttons with Tilt Effect */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in-up">
               {/* Primary Button - Explore Cities with Blue Glow */}
-              <button
-                onClick={() => router.push('/cities')}
-                className="group relative px-9 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white rounded-xl font-semibold text-base shadow-lg shadow-cyan-500/40 hover:shadow-2xl hover:shadow-cyan-500/70 transition-all duration-300 hover:scale-110 hover:-translate-y-1 flex items-center gap-2 overflow-hidden active:scale-105"
-              >
-                <span className="relative z-10">Explore Cities</span>
-                <span className="relative z-10 group-hover:translate-x-2 transition-transform duration-300">→</span>
-                {/* Animated shine effect */}
-                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-              </button>
+              <TiltCard maxTilt={15} scale={1.05}>
+                <Link
+                  href="/cities"
+                  prefetch={true}
+                  className="group relative px-9 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white rounded-xl font-semibold text-base shadow-lg shadow-cyan-500/40 hover:shadow-2xl hover:shadow-cyan-500/70 transition-all duration-300 flex items-center gap-2 overflow-hidden"
+                >
+                  <span className="relative z-10">Explore Cities</span>
+                  <span className="relative z-10 group-hover:translate-x-2 transition-transform duration-300">→</span>
+                  {/* Animated shine effect */}
+                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                </Link>
+              </TiltCard>
 
               {/* Secondary Button - Glass Outline */}
-              <button
-                onClick={() => router.push('/cities/san-francisco')}
-                className="group px-9 py-4 backdrop-blur-md bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.15] hover:border-cyan-400/50 text-white rounded-xl font-semibold text-base transition-all duration-300 hover:scale-110 hover:-translate-y-1 hover:shadow-lg hover:shadow-cyan-500/20 active:scale-105"
-              >
-                <span className="group-hover:text-cyan-300 transition-colors duration-300">See Demo</span>
-              </button>
+              <TiltCard maxTilt={15} scale={1.05}>
+                <Link
+                  href="/cities/san-francisco"
+                  prefetch={true}
+                  className="group px-9 py-4 backdrop-blur-md bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.15] hover:border-cyan-400/50 text-white rounded-xl font-semibold text-base transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/20 block"
+                >
+                  <span className="group-hover:text-cyan-300 transition-colors duration-300">See Demo</span>
+                </Link>
+              </TiltCard>
             </div>
 
           </div>
