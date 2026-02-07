@@ -5,7 +5,7 @@
  * The card tilts towards the cursor position with configurable intensity.
  */
 
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useRef, useState, useCallback } from 'react';
 
 interface TiltStyle {
   transform: string;
@@ -46,7 +46,6 @@ export function useTilt3D(options: UseTilt3DOptions = {}): UseTilt3DReturn {
   } = options;
 
   const ref = useRef<HTMLDivElement>(null);
-  const [isHovered, setIsHovered] = useState(false);
   const [tiltStyle, setTiltStyle] = useState<TiltStyle>({
     transform: 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1) translateZ(0px)',
     transition: `transform ${speed}ms cubic-bezier(0.03, 0.98, 0.52, 0.99)`,
@@ -76,13 +75,11 @@ export function useTilt3D(options: UseTilt3DOptions = {}): UseTilt3DReturn {
 
   const handleMouseEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!enabled) return;
-    setIsHovered(true);
     handleMouseMove(e);
   }, [enabled, handleMouseMove]);
 
   const handleMouseLeave = useCallback(() => {
     if (!enabled) return;
-    setIsHovered(false);
     setTiltStyle({
       transform: 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1) translateZ(0px)',
       transition: `transform ${speed * 2}ms cubic-bezier(0.03, 0.98, 0.52, 0.99)`,

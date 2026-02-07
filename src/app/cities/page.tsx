@@ -10,7 +10,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { TiltCard } from '@/components/TiltCard';
 
@@ -25,7 +25,8 @@ export default function CitiesPage() {
     return () => clearTimeout(timer);
   }, []);
 
-  // TODO: Fetch from API
+  // Curated city catalog — visual display data only.
+  // Actual metrics (population, GDP, etc.) are fetched from APIs on each city's detail page.
   const cities = [
     { 
       name: 'San Francisco', 

@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.cityatlas.backend.dto.event.AnalyticsEventPayload;
 import com.cityatlas.backend.dto.response.CityResponse;
 import com.cityatlas.backend.service.AnalyticsEventProducer;
+import com.cityatlas.backend.service.CityDataAggregator;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -43,6 +44,9 @@ public class CityController {
      */
     @Autowired(required = false)
     private AnalyticsEventProducer analyticsEventProducer;
+
+    @Autowired
+    private CityDataAggregator cityDataAggregator;
     
     /**
      * Get City Details by Slug
@@ -80,11 +84,10 @@ public class CityController {
             @RequestParam(required = false) String sessionId,
             @RequestParam(required = false) String userId) {
         // ============================================
-        // MOCK DATA - Replace with service call
-        // TODO: CityResponse city = cityService.getCityBySlug(slug);
+        // REAL DATA — fetched from GeoDB Cities + World Bank APIs
         // ============================================
         
-        CityResponse city = createMockCityResponse(slug);
+        CityResponse city = cityDataAggregator.buildCityResponse(slug);
         
         // ============================================
         // ANALYTICS EVENT PUBLISHING (Non-blocking)
@@ -125,41 +128,12 @@ public class CityController {
     }
     
     // ============================================
-    // Mock Data Generation - TEMPORARY
+    // Utility Methods
     // ============================================
-    
-    /**
-     * Creates mock city data for development/testing
-     * 
-     * TODO: Remove this method once database integration is complete
-     */
-    private CityResponse createMockCityResponse(String slug) {
-        // Convert slug to display name
-        String displayName = convertSlugToName(slug);
-        
-        return CityResponse.builder()
-            .id(1L)
-            .slug(slug)
-            .name(displayName)
-            .state("California")
-            .country("United States")
-            .population(873_965L)
-            .gdpPerCapita(85_000.0)
-            .latitude(37.7749)
-            .longitude(-122.4194)
-            .costOfLivingIndex(158)
-            .unemploymentRate(3.8)
-            .bannerImageUrl("https://images.unsplash.com/photo-1501594907352-04cda38ebc29")
-            .description("Global technology hub and cultural center on the West Coast")
-            .lastUpdated(LocalDateTime.now())
-            .build();
-    }
     
     /**
      * Helper: Convert URL slug to display name
      * Example: "san-francisco" -> "San Francisco"
-     * 
-     * TODO: Move to utility class
      */
     private String convertSlugToName(String slug) {
         String[] words = slug.split("-");

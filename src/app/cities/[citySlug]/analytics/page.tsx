@@ -2,22 +2,18 @@
  * Analytics Section Page
  * Route: /cities/[citySlug]/analytics
  * 
- * Premium glassmorphism analytics dashboard with scroll-triggered animations
+ * Premium glassmorphism analytics dashboard with scroll-triggered animations.
+ * Data sourced from: World Bank API (population), OpenAQ (AQI).
+ * Job sectors and cost of living removed — no free city-level source.
  */
 
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { AQITrendChart } from '@/components/charts/AQITrendChart';
-import { JobSectorChart } from '@/components/charts/JobSectorChart';
-import { CostOfLivingChart } from '@/components/charts/CostOfLivingChart';
+import { useParams } from 'next/navigation';
 import { PopulationChart } from '@/components/charts/PopulationChart';
-import { 
-  getAQITrendData, 
-  getJobSectorData, 
-  getCostOfLivingData, 
-  getPopulationData 
-} from '@/lib/mock';
+import { fetchAnalyticsData } from '@/lib/api';
+import type { AnalyticsData } from '@/lib/api';
 
 // Custom hook for scroll-triggered animations
 function useScrollAnimation(threshold = 0.1) {
@@ -101,16 +97,41 @@ function SectionHeader({ icon, title, description, delay = 0 }: { icon: string; 
 
 export default function AnalyticsPage() {
   const [isLoaded, setIsLoaded] = useState(false);
-  
-  const aqiData = getAQITrendData();
-  const jobData = getJobSectorData();
-  const costData = getCostOfLivingData();
-  const populationData = getPopulationData();
+  const params = useParams();
+  const citySlug = params.citySlug as string;
+
+  // Real data from backend API (World Bank + OpenAQ)
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoaded(true), 100);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (!citySlug) return;
+    setLoading(true);
+    fetchAnalyticsData(citySlug).then(data => {
+      setAnalytics(data);
+      setLoading(false);
+    });
+  }, [citySlug]);
+
+  const populationData = analytics?.populationTrend ?? [];
+  const aqiData = analytics?.aqiTrend ?? [];
+  const cityName = citySlug ? citySlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'City';
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin mx-auto" />
+          <p className="text-white/50 text-sm">Loading analytics data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`space-y-8 transition-all duration-[1200ms] ease-out ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
@@ -128,89 +149,82 @@ export default function AnalyticsPage() {
               Analytics Dashboard
             </span>
             <h1 className="text-2xl md:text-3xl font-bold text-white">
-              City Performance Metrics
+              {cityName} Performance Metrics
             </h1>
             <p className="text-white/50 mt-1">
-              Comprehensive analytics across environment, economy, and demographics
+              Population trends and environmental data from verified sources
             </p>
           </div>
         </div>
       </GlassCard>
 
-      {/* Environmental Quality Section */}
-      <div>
-        <SectionHeader 
-          icon="🌤️" 
-          title="Environmental Quality" 
-          description="Air quality index trends and historical data"
-          delay={50}
-        />
-        <GlassCard className="p-6" delay={100}>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-lg font-semibold text-white">Air Quality Index (AQI) - 12 Month Trend</h3>
-              <p className="text-white/50 text-sm">Lower values indicate better air quality. Good: 0-50 | Moderate: 51-100</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-emerald-400"></span>
-                <span className="text-white/60 text-sm">AQI</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-indigo-400"></span>
-                <span className="text-white/60 text-sm">Benchmark</span>
-              </div>
-            </div>
-          </div>
-          <AQITrendChart data={aqiData} showBenchmark />
-        </GlassCard>
-      </div>
-
-      {/* Economic Indicators Section */}
-      <div>
-        <SectionHeader 
-          icon="💼" 
-          title="Economic Indicators" 
-          description="Employment distribution and cost of living analysis"
-          delay={50}
-        />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <GlassCard className="p-6 hover:bg-white/[0.05] transition-all duration-500" delay={100}>
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-white">Employment by Sector</h3>
-              <p className="text-white/50 text-sm">Current workforce distribution across major industries</p>
-            </div>
-            <JobSectorChart data={jobData} />
-          </GlassCard>
-
-          <GlassCard className="p-6 hover:bg-white/[0.05] transition-all duration-500" delay={150}>
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-white">Cost of Living Index</h3>
-              <p className="text-white/50 text-sm">Comparison to national average (100 = national average)</p>
-            </div>
-            <CostOfLivingChart data={costData} showNationalAverage />
-          </GlassCard>
-        </div>
-      </div>
-
-      {/* Demographics Section */}
+      {/* Demographics Section — World Bank historical population */}
       <div>
         <SectionHeader 
           icon="👥" 
           title="Demographics" 
-          description="Population growth trends and projections"
+          description="Country-level population trends from World Bank Open Data"
           delay={50}
         />
         <GlassCard className="p-6" delay={100}>
           <div className="mb-4">
-            <h3 className="text-lg font-semibold text-white">Population Growth (10-Year Trend)</h3>
-            <p className="text-white/50 text-sm">Historical population in millions with year-over-year growth rates</p>
+            <h3 className="text-lg font-semibold text-white">Population Trend (10-Year)</h3>
+            <p className="text-white/50 text-sm">Historical country-level population in millions with year-over-year growth rates</p>
           </div>
-          <PopulationChart data={populationData} />
+          {populationData.length > 0 ? (
+            <PopulationChart data={populationData} />
+          ) : (
+            <div className="flex items-center justify-center h-48 text-white/30 text-sm">
+              Population data not available for this location
+            </div>
+          )}
         </GlassCard>
       </div>
 
-      {/* Data Insights Footer */}
+      {/* Environmental Quality Section — OpenAQ data */}
+      {aqiData.length > 0 && (
+        <div>
+          <SectionHeader 
+            icon="🌤️" 
+            title="Environmental Quality" 
+            description="Air quality data from OpenAQ monitoring stations"
+            delay={50}
+          />
+          <GlassCard className="p-6" delay={100}>
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-white">Air Quality Index (AQI)</h3>
+              <p className="text-white/50 text-sm">Lower values indicate better air quality. Good: 0-50 | Moderate: 51-100</p>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {aqiData.map((point: { month: string; aqi: number }, idx: number) => (
+                <div key={idx} className="p-3 rounded-xl bg-white/[0.03] border border-white/5 text-center">
+                  <p className="text-white/40 text-xs mb-1">{point.month}</p>
+                  <p className={`text-xl font-bold ${point.aqi <= 50 ? 'text-emerald-400' : point.aqi <= 100 ? 'text-amber-400' : 'text-red-400'}`}>
+                    {point.aqi}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </GlassCard>
+        </div>
+      )}
+
+      {/* No Job/Cost Data Notice */}
+      <GlassCard className="p-5 border-amber-500/10" delay={100}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+            <span className="text-lg">📊</span>
+          </div>
+          <div>
+            <p className="text-white/70 text-sm">
+              <span className="text-white font-medium">Employment & Cost of Living:</span> City-level job sector and cost-of-living data 
+              require paid data sources. These sections will be available when premium data providers are integrated.
+            </p>
+          </div>
+        </div>
+      </GlassCard>
+
+      {/* Data Sources Footer */}
       <GlassCard className="p-6" delay={50}>
         <div className="flex items-start gap-4">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center flex-shrink-0">
@@ -222,15 +236,16 @@ export default function AnalyticsPage() {
             <h3 className="text-lg font-semibold text-white">About This Data</h3>
             <div className="space-y-2 text-sm text-white/60">
               <p>
-                <span className="text-white font-medium">Data Sources:</span> Charts display real-time analytics from 
-                environmental monitoring APIs, labor statistics, census data, and economic indices.
+                <span className="text-white font-medium">Population:</span> World Bank Open Data API — country-level indicators updated annually.
               </p>
               <p>
-                <span className="text-white font-medium">Update Frequency:</span> Environmental data: Daily | 
-                Economic data: Monthly | Demographics: Quarterly
+                <span className="text-white font-medium">Air Quality:</span> OpenAQ API — real-time air quality measurements from government monitoring stations.
+              </p>
+              <p>
+                <span className="text-white font-medium">Update Frequency:</span> Population: Annual | AQI: Real-time (cached 6h)
               </p>
               <p className="text-white/40 text-xs pt-2 border-t border-white/5">
-                Note: Currently displaying mock data for demonstration. Production version will connect to live APIs.
+                All data sourced from free, open government and international organization APIs. No fabricated data.
               </p>
             </div>
           </div>

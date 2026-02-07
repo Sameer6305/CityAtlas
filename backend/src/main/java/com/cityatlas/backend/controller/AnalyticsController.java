@@ -1,8 +1,6 @@
 package com.cityatlas.backend.controller;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -14,11 +12,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.cityatlas.backend.dto.event.AnalyticsEventPayload;
 import com.cityatlas.backend.dto.response.AnalyticsResponse;
-import com.cityatlas.backend.dto.response.AnalyticsResponse.AQIDataPoint;
-import com.cityatlas.backend.dto.response.AnalyticsResponse.CostOfLivingData;
-import com.cityatlas.backend.dto.response.AnalyticsResponse.JobSectorData;
-import com.cityatlas.backend.dto.response.AnalyticsResponse.PopulationDataPoint;
 import com.cityatlas.backend.service.AnalyticsEventProducer;
+import com.cityatlas.backend.service.CityDataAggregator;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -46,10 +41,12 @@ public class AnalyticsController {
     
     /**
      * Analytics event producer for Kafka integration (Optional)
-     * Used to publish user behavior events asynchronously when Kafka is enabled
      */
     @Autowired(required = false)
     private AnalyticsEventProducer analyticsEventProducer;
+
+    @Autowired
+    private CityDataAggregator cityDataAggregator;
     
     /**
      * Get Comprehensive Analytics for a City
@@ -91,11 +88,11 @@ public class AnalyticsController {
             @RequestParam(required = false) String sessionId,
             @RequestParam(required = false) String userId) {
         // ============================================
-        // MOCK DATA - Replace with service call
-        // TODO: AnalyticsResponse analytics = analyticsService.getAnalyticsBySlug(slug);
+        // REAL DATA — fetched from World Bank + OpenAQ APIs
+        // Job sectors and cost of living REMOVED (no free source)
         // ============================================
         
-        AnalyticsResponse analytics = createMockAnalyticsResponse(slug);
+        AnalyticsResponse analytics = cityDataAggregator.buildAnalyticsResponse(slug);
         
         // ============================================
         // ANALYTICS EVENT PUBLISHING (Non-blocking)
@@ -137,171 +134,12 @@ public class AnalyticsController {
     }
     
     // ============================================
-    // Mock Data Generation - TEMPORARY
+    // Utility Methods
     // ============================================
-    
-    /**
-     * Creates mock analytics data for development/testing
-     * 
-     * Matches the data structure expected by frontend Recharts components.
-     * 
-     * TODO: Remove this method once database integration is complete
-     * TODO: In production, this data comes from:
-     * - Environmental monitoring APIs (OpenAQ, IQAir)
-     * - Labor statistics databases
-     * - Census data
-     * - Economic indices
-     */
-    private AnalyticsResponse createMockAnalyticsResponse(String slug) {
-        String cityName = convertSlugToName(slug);
-        
-        return AnalyticsResponse.builder()
-            .citySlug(slug)
-            .cityName(cityName)
-            .aqiTrend(createMockAQIData())
-            .jobSectors(createMockJobSectorData())
-            .costOfLiving(createMockCostOfLivingData())
-            .populationTrend(createMockPopulationData())
-            .build();
-    }
-    
-    /**
-     * Mock AQI (Air Quality Index) Trend - 12 months
-     * Lower values = better air quality
-     * 0-50: Good | 51-100: Moderate | 101-150: Unhealthy | 151+: Hazardous
-     */
-    private List<AQIDataPoint> createMockAQIData() {
-        return Arrays.asList(
-            AQIDataPoint.builder().month("Jan").aqi(52).category("Moderate").build(),
-            AQIDataPoint.builder().month("Feb").aqi(48).category("Good").build(),
-            AQIDataPoint.builder().month("Mar").aqi(45).category("Good").build(),
-            AQIDataPoint.builder().month("Apr").aqi(41).category("Good").build(),
-            AQIDataPoint.builder().month("May").aqi(38).category("Good").build(),
-            AQIDataPoint.builder().month("Jun").aqi(42).category("Good").build(),
-            AQIDataPoint.builder().month("Jul").aqi(47).category("Good").build(),
-            AQIDataPoint.builder().month("Aug").aqi(44).category("Good").build(),
-            AQIDataPoint.builder().month("Sep").aqi(40).category("Good").build(),
-            AQIDataPoint.builder().month("Oct").aqi(43).category("Good").build(),
-            AQIDataPoint.builder().month("Nov").aqi(46).category("Good").build(),
-            AQIDataPoint.builder().month("Dec").aqi(45).category("Good").build()
-        );
-    }
-    
-    /**
-     * Mock Employment Distribution by Sector
-     * Represents current workforce breakdown
-     */
-    private List<JobSectorData> createMockJobSectorData() {
-        return Arrays.asList(
-            JobSectorData.builder()
-                .sector("Technology")
-                .employees(185000)
-                .percentage(28.5)
-                .growthRate(5.2)
-                .build(),
-            JobSectorData.builder()
-                .sector("Healthcare")
-                .employees(142000)
-                .percentage(21.8)
-                .growthRate(3.1)
-                .build(),
-            JobSectorData.builder()
-                .sector("Finance")
-                .employees(98000)
-                .percentage(15.1)
-                .growthRate(2.4)
-                .build(),
-            JobSectorData.builder()
-                .sector("Education")
-                .employees(87000)
-                .percentage(13.4)
-                .growthRate(1.8)
-                .build(),
-            JobSectorData.builder()
-                .sector("Retail")
-                .employees(76000)
-                .percentage(11.7)
-                .growthRate(-0.5)
-                .build(),
-            JobSectorData.builder()
-                .sector("Manufacturing")
-                .employees(62000)
-                .percentage(9.5)
-                .growthRate(-1.2)
-                .build()
-        );
-    }
-    
-    /**
-     * Mock Cost of Living Index by Category
-     * 100 = national average
-     * Values above 100 indicate higher than average cost
-     */
-    private List<CostOfLivingData> createMockCostOfLivingData() {
-        return Arrays.asList(
-            CostOfLivingData.builder()
-                .category("Housing")
-                .index(195)
-                .nationalAverage(100)
-                .monthlyAvg(2850)
-                .build(),
-            CostOfLivingData.builder()
-                .category("Food")
-                .index(142)
-                .nationalAverage(100)
-                .monthlyAvg(680)
-                .build(),
-            CostOfLivingData.builder()
-                .category("Transportation")
-                .index(128)
-                .nationalAverage(100)
-                .monthlyAvg(420)
-                .build(),
-            CostOfLivingData.builder()
-                .category("Healthcare")
-                .index(135)
-                .nationalAverage(100)
-                .monthlyAvg(580)
-                .build(),
-            CostOfLivingData.builder()
-                .category("Education")
-                .index(168)
-                .nationalAverage(100)
-                .monthlyAvg(1250)
-                .build(),
-            CostOfLivingData.builder()
-                .category("Utilities")
-                .index(115)
-                .nationalAverage(100)
-                .monthlyAvg(185)
-                .build()
-        );
-    }
-    
-    /**
-     * Mock Population Growth Trend - 10 years
-     * Population in millions, growth rate as percentage
-     */
-    private List<PopulationDataPoint> createMockPopulationData() {
-        return Arrays.asList(
-            PopulationDataPoint.builder().year("2015").population(7.8).growthRate(1.2).build(),
-            PopulationDataPoint.builder().year("2016").population(7.9).growthRate(1.3).build(),
-            PopulationDataPoint.builder().year("2017").population(8.0).growthRate(1.3).build(),
-            PopulationDataPoint.builder().year("2018").population(8.1).growthRate(1.2).build(),
-            PopulationDataPoint.builder().year("2019").population(8.2).growthRate(1.2).build(),
-            PopulationDataPoint.builder().year("2020").population(8.1).growthRate(-1.2).build(),
-            PopulationDataPoint.builder().year("2021").population(8.2).growthRate(1.2).build(),
-            PopulationDataPoint.builder().year("2022").population(8.25).growthRate(0.6).build(),
-            PopulationDataPoint.builder().year("2023").population(8.3).growthRate(0.6).build(),
-            PopulationDataPoint.builder().year("2024").population(8.35).growthRate(0.6).build()
-        );
-    }
-    
+
     /**
      * Helper: Convert URL slug to display name
      * Example: "san-francisco" -> "San Francisco"
-     * 
-     * TODO: Move to utility class (duplicated in CityController)
      */
     private String convertSlugToName(String slug) {
         String[] words = slug.split("-");

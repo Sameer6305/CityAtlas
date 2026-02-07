@@ -4,12 +4,16 @@
  * 
  * Premium glassmorphism dashboard design
  * Shows high-level city information and key metrics.
+ * Data sourced from: GeoDB Cities, World Bank, OpenWeatherMap, OpenAQ APIs.
  */
 
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { AreaChart, PieChart } from '@/components';
+import { useParams } from 'next/navigation';
+import { AreaChart } from '@/components';
+import { fetchCityData, fetchAnalyticsData, formatPopulation, formatCurrency } from '@/lib/api';
+import type { CityData, AnalyticsData } from '@/lib/api';
 
 // Custom hook for scroll-triggered animations using Intersection Observer
 function useScrollAnimation(threshold = 0.1) {
@@ -40,58 +44,6 @@ function useScrollAnimation(threshold = 0.1) {
 
   return { ref, isVisible };
 }
-
-// Sample population growth data
-const populationData = [
-  { year: '2015', population: 7.8 },
-  { year: '2016', population: 7.9 },
-  { year: '2017', population: 8.0 },
-  { year: '2018', population: 8.1 },
-  { year: '2019', population: 8.2 },
-  { year: '2020', population: 8.1 },
-  { year: '2021', population: 8.2 },
-  { year: '2022', population: 8.25 },
-  { year: '2023', population: 8.3 },
-];
-
-// AQI Trend data
-const aqiData = [
-  { month: 'Jan', aqi: 85 },
-  { month: 'Feb', aqi: 92 },
-  { month: 'Mar', aqi: 78 },
-  { month: 'Apr', aqi: 65 },
-  { month: 'May', aqi: 72 },
-  { month: 'Jun', aqi: 88 },
-  { month: 'Jul', aqi: 95 },
-  { month: 'Aug', aqi: 102 },
-  { month: 'Sep', aqi: 85 },
-  { month: 'Oct', aqi: 78 },
-  { month: 'Nov', aqi: 82 },
-  { month: 'Dec', aqi: 90 },
-];
-
-// Cost of living breakdown
-const costOfLivingData = [
-  { category: 'Housing', value: 45, color: '#ef4444' },
-  { category: 'Food', value: 15, color: '#f59e0b' },
-  { category: 'Transport', value: 12, color: '#10b981' },
-  { category: 'Healthcare', value: 10, color: '#3b82f6' },
-  { category: 'Education', value: 8, color: '#8b5cf6' },
-  { category: 'Utilities', value: 5, color: '#ec4899' },
-  { category: 'Other', value: 5, color: '#6b7280' },
-];
-
-// Jobs sector data
-const jobsData = [
-  { name: 'Tech', value: 28 },
-  { name: 'Finance', value: 22 },
-  { name: 'Healthcare', value: 18 },
-  { name: 'Retail', value: 15 },
-  { name: 'Education', value: 10 },
-  { name: 'Other', value: 7 },
-];
-
-const jobsColors = ['#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#3b82f6', '#6b7280'];
 
 // Glassmorphism card component with scroll-triggered animation - Matches All Cities page style
 function GlassCard({ children, className = '', delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
@@ -173,280 +125,204 @@ function MetricDisplay({
 
 export default function CityOverviewPage() {
   const [isLoaded, setIsLoaded] = useState(false);
+  const params = useParams();
+  const citySlug = params.citySlug as string;
+
+  // Real data from backend APIs
+  const [cityData, setCityData] = useState<CityData | null>(null);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoaded(true), 100);
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    if (!citySlug) return;
+    setLoading(true);
+    Promise.all([
+      fetchCityData(citySlug),
+      fetchAnalyticsData(citySlug),
+    ]).then(([city, anal]) => {
+      setCityData(city);
+      setAnalytics(anal);
+      setLoading(false);
+    });
+  }, [citySlug]);
+
+  // Prepare population chart data from real World Bank data
+  const populationChartData = analytics?.populationTrend?.length
+    ? analytics.populationTrend.map(p => ({ year: p.year, population: p.population }))
+    : [];
+
   return (
     <div className={`space-y-8 transition-all duration-[1200ms] ease-out ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
       
-      {/* Key Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-        <MetricDisplay
-          label="Weather"
-          value="32°C"
-          trend="up"
-          trendValue="Sunny"
-          iconBg="from-amber-500/20 to-orange-500/20"
-          delay={100}
-          icon={
-            <svg className="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-          }
-        />
-        <MetricDisplay
-          label="Population"
-          value="20.4M"
-          trend="up"
-          trendValue="+2.3%"
-          iconBg="from-cyan-500/20 to-blue-500/20"
-          delay={200}
-          icon={
-            <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          }
-        />
-        <MetricDisplay
-          label="GDP per Capita"
-          value="$85K"
-          trend="up"
-          trendValue="+4.1%"
-          iconBg="from-emerald-500/20 to-teal-500/20"
-          delay={300}
-          icon={
-            <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          }
-        />
-        <MetricDisplay
-          label="Air Quality"
-          value="AQI 78"
-          trend="down"
-          trendValue="Moderate"
-          iconBg="from-purple-500/20 to-pink-500/20"
-          delay={400}
-          icon={
-            <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
-            </svg>
-          }
-        />
-      </div>
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-cyan-400"></div>
+          <span className="ml-4 text-white/60">Loading real city data...</span>
+        </div>
+      )}
 
-      {/* Main Dashboard Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Population Trend - Spans 2 columns */}
-        <GlassCard className="lg:col-span-2 p-6" delay={100}>
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-lg font-semibold text-white">Population Growth</h3>
-              <p className="text-white/50 text-sm">Historical trend over 9 years</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-cyan-400 animate-pulse"></span>
-              <span className="text-white/60 text-sm">Population (M)</span>
-            </div>
-          </div>
-          <AreaChart
-            data={populationData}
-            xKey="year"
-            areas={[
-              { dataKey: 'population', name: 'Population (M)', color: '#06b6d4', fillOpacity: 0.3 },
-            ]}
-            height={260}
-          />
-        </GlassCard>
-
-        {/* Music Culture Card */}
-        <GlassCard className="p-6" delay={150}>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500/20 to-purple-500/20 flex items-center justify-center">
-              <svg className="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-white">Music Culture</h3>
-              <p className="text-white/50 text-sm">Top genres in the city</p>
-            </div>
-          </div>
-          <div className="space-y-3">
-            {[
-              { genre: 'Bollywood', percentage: 45, color: 'from-pink-500 to-rose-500' },
-              { genre: 'Hip-Hop', percentage: 25, color: 'from-purple-500 to-indigo-500' },
-              { genre: 'Classical', percentage: 15, color: 'from-amber-500 to-orange-500' },
-              { genre: 'EDM', percentage: 10, color: 'from-cyan-500 to-blue-500' },
-              { genre: 'Rock', percentage: 5, color: 'from-emerald-500 to-teal-500' },
-            ].map((item) => (
-              <div key={item.genre} className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span className="text-white/70">{item.genre}</span>
-                  <span className="text-white font-medium">{item.percentage}%</span>
-                </div>
-                <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full bg-gradient-to-r ${item.color} rounded-full transition-all duration-1000`}
-                    style={{ width: `${item.percentage}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </GlassCard>
-
-        {/* Jobs Distribution */}
-        <GlassCard className="p-6" delay={50}>
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold text-white">Jobs Distribution</h3>
-            <p className="text-white/50 text-sm">Employment by sector</p>
-          </div>
-          <div className="h-[200px]">
-            <PieChart
-              data={jobsData}
-              colors={jobsColors}
-              height={200}
-              innerRadius={50}
-              showLabels={false}
+      {!loading && (
+        <>
+          {/* Key Metrics Grid — all from real APIs */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+            <MetricDisplay
+              label="Population"
+              value={formatPopulation(cityData?.population ?? null)}
+              trend={cityData?.population ? 'up' : undefined}
+              trendValue={cityData?.population ? 'GeoDB Cities' : undefined}
+              iconBg="from-cyan-500/20 to-blue-500/20"
+              delay={100}
+              icon={
+                <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              }
+            />
+            <MetricDisplay
+              label="GDP per Capita"
+              value={formatCurrency(cityData?.gdpPerCapita ?? null)}
+              trend={cityData?.gdpPerCapita ? 'up' : undefined}
+              trendValue={cityData?.gdpPerCapita ? 'World Bank' : undefined}
+              iconBg="from-emerald-500/20 to-teal-500/20"
+              delay={200}
+              icon={
+                <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              }
+            />
+            <MetricDisplay
+              label="Life Expectancy"
+              value={cityData?.lifeExpectancy != null ? `${cityData.lifeExpectancy} yr` : 'N/A'}
+              trend={cityData?.lifeExpectancy != null ? (cityData.lifeExpectancy > 70 ? 'up' : 'down') : undefined}
+              trendValue={cityData?.lifeExpectancy != null ? 'World Bank' : undefined}
+              iconBg="from-rose-500/20 to-pink-500/20"
+              delay={300}
+              icon={
+                <svg className="w-6 h-6 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              }
+            />
+            <MetricDisplay
+              label="Country"
+              value={cityData?.country ?? 'N/A'}
+              iconBg="from-purple-500/20 to-pink-500/20"
+              delay={400}
+              icon={
+                <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              }
             />
           </div>
-          <div className="grid grid-cols-2 gap-2 mt-4">
-            {jobsData.map((item, index) => (
-              <div key={item.name} className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: jobsColors[index] }}></span>
-                <span className="text-white/60 text-xs">{item.name}: {item.value}%</span>
-              </div>
-            ))}
-          </div>
-        </GlassCard>
 
-        {/* Cost of Living */}
-        <GlassCard className="p-6" delay={100}>
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold text-white">Cost of Living</h3>
-            <p className="text-white/50 text-sm">Monthly expense breakdown</p>
-          </div>
-          <div className="space-y-3">
-            {costOfLivingData.map((item) => (
-              <div key={item.category} className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                <div className="flex-1">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-white/70">{item.category}</span>
-                    <span className="text-white font-medium">{item.value}%</span>
-                  </div>
-                  <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full rounded-full transition-all duration-1000"
-                      style={{ width: `${item.value}%`, backgroundColor: item.color }}
-                    />
-                  </div>
+          {/* Live Weather Strip — from OpenWeatherMap */}
+          {cityData?.weatherTemp != null && (
+            <GlassCard className="p-4 bg-gradient-to-r from-blue-500/10 via-transparent to-cyan-500/10" delay={50}>
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-white/70 text-sm font-medium">Live Weather</span>
+                </div>
+                <div className="flex items-center gap-6 text-sm">
+                  <span className="text-white font-bold text-lg">{cityData.weatherTemp}°C</span>
+                  <span className="text-white/60 capitalize">{cityData.weatherDescription}</span>
+                  <span className="text-white/50">💧 {cityData.weatherHumidity}%</span>
+                  <span className="text-white/50">🌬️ {cityData.weatherWindSpeed} m/s</span>
+                  <span className="text-white/30 text-xs">OpenWeatherMap</span>
                 </div>
               </div>
-            ))}
-          </div>
-        </GlassCard>
+            </GlassCard>
+          )}
 
-        {/* AQI Trend - Spans full width */}
-        <GlassCard className="lg:col-span-3 p-6" delay={150}>
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-lg font-semibold text-white">Air Quality Index Trend</h3>
-              <p className="text-white/50 text-sm">Monthly AQI readings for the year</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-emerald-400"></span>
-                <span className="text-white/60 text-sm">Good (0-50)</span>
+          {/* Live AQI Badge — from OpenAQ */}
+          {cityData?.airQualityIndex != null && (
+            <GlassCard className="p-4" delay={75}>
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-white/70 text-sm font-medium">Air Quality</span>
+                </div>
+                <div className="flex items-center gap-5 text-sm">
+                  <span className={`font-bold text-lg ${cityData.airQualityIndex <= 50 ? 'text-emerald-400' : cityData.airQualityIndex <= 100 ? 'text-yellow-400' : 'text-red-400'}`}>
+                    AQI {cityData.airQualityIndex}
+                  </span>
+                  <span className="text-white/60">{cityData.airQualityCategory}</span>
+                  {cityData.pm25 != null && <span className="text-white/50">PM2.5: {cityData.pm25} μg/m³</span>}
+                  <span className="text-white/30 text-xs">OpenAQ</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-amber-400"></span>
-                <span className="text-white/60 text-sm">Moderate (51-100)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-red-400"></span>
-                <span className="text-white/60 text-sm">Unhealthy (100+)</span>
-              </div>
-            </div>
-          </div>
-          <AreaChart
-            data={aqiData}
-            xKey="month"
-            areas={[
-              { dataKey: 'aqi', name: 'AQI', color: '#f59e0b', fillOpacity: 0.2 },
-            ]}
-            height={200}
-          />
-        </GlassCard>
-      </div>
+            </GlassCard>
+          )}
 
-      {/* City Highlights & Challenges */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <GlassCard className="p-6" delay={50}>
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
-              <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-              </svg>
-            </div>
-            City Highlights
-          </h3>
-          <ul className="space-y-4">
-            {[
-              { title: 'Global Financial Hub', desc: 'Major center for finance and business' },
-              { title: 'Cultural Diversity', desc: 'Over 800 languages spoken' },
-              { title: 'Innovation Leader', desc: 'Top 5 in global innovation index' },
-            ].map((item) => (
-              <li key={item.title} className="flex items-start gap-3">
-                <span className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <svg className="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </span>
+          {/* Population Trend — Real World Bank Data */}
+          {populationChartData.length > 0 && (
+            <GlassCard className="p-6" delay={100}>
+              <div className="flex items-center justify-between mb-6">
                 <div>
-                  <p className="text-white font-medium">{item.title}</p>
-                  <p className="text-white/50 text-sm">{item.desc}</p>
+                  <h3 className="text-lg font-semibold text-white">Population Trend (Country)</h3>
+                  <p className="text-white/50 text-sm">Historical data from World Bank API — country-level</p>
                 </div>
-              </li>
-            ))}
-          </ul>
-        </GlassCard>
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-cyan-400 animate-pulse"></span>
+                  <span className="text-white/60 text-sm">Population (M)</span>
+                </div>
+              </div>
+              <AreaChart
+                data={populationChartData}
+                xKey="year"
+                areas={[
+                  { dataKey: 'population', name: 'Population (M)', color: '#06b6d4', fillOpacity: 0.3 },
+                ]}
+                height={280}
+              />
+            </GlassCard>
+          )}
 
-        <GlassCard className="p-6" delay={100}>
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
-              <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            Key Challenges
-          </h3>
-          <ul className="space-y-4">
-            {[
-              { title: 'Housing Affordability', desc: 'Rising costs impact residents' },
-              { title: 'Transportation Congestion', desc: 'Infrastructure under pressure' },
-              { title: 'Climate Adaptation', desc: 'Need for sustainable solutions' },
-            ].map((item) => (
-              <li key={item.title} className="flex items-start gap-3">
-                <span className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <svg className="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          {/* City Description */}
+          {cityData?.description && (
+            <GlassCard className="p-6" delay={150}>
+              <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                </span>
-                <div>
-                  <p className="text-white font-medium">{item.title}</p>
-                  <p className="text-white/50 text-sm">{item.desc}</p>
                 </div>
-              </li>
-            ))}
-          </ul>
-        </GlassCard>
-      </div>
+                About {cityData.name}
+              </h3>
+              <p className="text-white/70 leading-relaxed">{cityData.description}</p>
+              {cityData.state && (
+                <p className="text-white/50 text-sm mt-3">
+                  📍 {cityData.state}, {cityData.country} 
+                  {cityData.latitude && cityData.longitude && (
+                    <span className="ml-2">
+                      ({cityData.latitude.toFixed(2)}°, {cityData.longitude.toFixed(2)}°)
+                    </span>
+                  )}
+                </p>
+              )}
+              <p className="text-white/30 text-xs mt-2">
+                Data sources: GeoDB Cities API, World Bank Open Data • Last updated: {new Date(cityData.lastUpdated).toLocaleDateString()}
+              </p>
+            </GlassCard>
+          )}
+
+          {/* No Data Fallback */}
+          {!cityData && !loading && (
+            <GlassCard className="p-8 text-center" delay={100}>
+              <p className="text-white/60 text-lg">No data available for this city.</p>
+              <p className="text-white/40 text-sm mt-2">The backend API may be unavailable or this city is not in the database.</p>
+            </GlassCard>
+          )}
+        </>
+      )}
     </div>
   );
 }
