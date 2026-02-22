@@ -57,7 +57,7 @@ import reactor.core.publisher.Mono;
  * @see SpotifyService
  */
 @RestController
-@RequestMapping("/api/spotify")
+@RequestMapping("/spotify")
 public class SpotifyController {
     
     private static final Logger logger = LoggerFactory.getLogger(SpotifyController.class);

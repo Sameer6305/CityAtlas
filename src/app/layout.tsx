@@ -10,6 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: "CityAtlas - Intelligence in Urban Flow",
   description: "Dark-themed, event-driven city intelligence platform presenting cities as structured resumes with real-time data and AI insights",
   keywords: ["city data", "analytics", "city intelligence", "urban planning", "city comparison"],

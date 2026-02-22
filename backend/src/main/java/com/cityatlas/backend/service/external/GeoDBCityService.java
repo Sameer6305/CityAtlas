@@ -16,7 +16,7 @@ import reactor.util.retry.Retry;
  * GeoDB Cities API Service — Free tier, no API key needed
  * 
  * Fetches city-level data from the GeoDB free endpoint.
- * Base URL: http://geodb-free-service.wirefreethought.com/v1/geo/
+ * Base URL: https://geodb-free-service.wirefreethought.com/v1/geo/
  * 
  * Free tier limits: ~1 request/second
  * 
@@ -29,7 +29,7 @@ import reactor.util.retry.Retry;
 @Slf4j
 public class GeoDBCityService {
 
-    private static final String BASE_URL = "http://geodb-free-service.wirefreethought.com/v1/geo";
+    private static final String BASE_URL = "https://geodb-free-service.wirefreethought.com/v1/geo";
 
     private final WebClient webClient;
 

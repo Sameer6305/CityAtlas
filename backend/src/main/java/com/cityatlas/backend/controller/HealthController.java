@@ -25,7 +25,7 @@ import com.cityatlas.backend.dto.response.HealthResponse;
  * - Memory usage
  */
 @RestController
-@RequestMapping("/api/health")
+@RequestMapping("/health")
 public class HealthController {
     
     /**

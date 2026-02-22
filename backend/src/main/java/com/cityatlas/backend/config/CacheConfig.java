@@ -54,12 +54,17 @@ public class CacheConfig {
     /**
      * Caffeine-backed cache manager with per-cache TTL and eviction.
      * Falls back to 10-minute TTL / 200 max for unlisted caches.
+     *
+     * Async mode is required so that @Cacheable works on reactive (Mono/Flux)
+     * return types (Spring Framework 6.1+ supports sync callers with async caches).
      */
     @Bean
     @Primary
     public CacheManager cacheManager() {
         CaffeineCacheManager cacheManager = new CaffeineCacheManager();
         cacheManager.setAllowNullValues(false);
+        // Required for @Cacheable on Mono<> return types (WeatherService, AirQualityService, etc.)
+        cacheManager.setAsyncCacheMode(true);
 
         // Register each named cache with its own Caffeine spec
         CACHE_SPECS.forEach((name, spec) -> {
@@ -68,7 +73,7 @@ public class CacheConfig {
                     .expireAfterWrite(spec.ttl())
                     .maximumSize(spec.maxSize())
                     .recordStats()
-                    .build());
+                    .buildAsync());
             log.info("Cache '{}' configured: TTL={}, maxSize={}", name, spec.ttl(), spec.maxSize());
         });
 

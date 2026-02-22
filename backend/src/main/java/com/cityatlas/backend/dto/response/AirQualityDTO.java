@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -158,127 +157,112 @@ public class AirQualityDTO {
     }
 
     /**
-     * Create AirQualityDTO from OpenAQ API response
-     * 
-     * @param response OpenAQ API response
-     * @return Mapped AirQualityDTO
+     * Create AirQualityDTO from OpenAQ API v3 response.
+     *
+     * v3 /measurements returns a flat list — each result is one parameter reading.
+     * We scan for PM2.5 first, fall back to PM10 if absent.
+     *
+     * @param response OpenAQ v3 API response
+     * @return Mapped AirQualityDTO, or null if no usable data
      */
     public static AirQualityDTO fromOpenAqResponse(OpenAqResponse response) {
         if (response == null || response.getResults() == null || response.getResults().isEmpty()) {
             return null;
         }
-        
-        // Take the first (most recent) result
-        OpenAqResponse.Result result = response.getResults().get(0);
-        
+
+        OpenAqResponse.V3Measurement first = response.getResults().get(0);
+
         AirQualityDTO.AirQualityDTOBuilder builder = AirQualityDTO.builder()
-            .location(result.getLocation())
-            .city(result.getCity())
-            .country(result.getCountry());
-        
-        // Map coordinates
-        if (result.getCoordinates() != null) {
-            builder.latitude(result.getCoordinates().getLatitude())
-                   .longitude(result.getCoordinates().getLongitude());
+            .location(first.getLocation())
+            .city(first.getCity())
+            .country(first.getCountry())
+            .source("OpenAQ v3");
+
+        if (first.getCoordinates() != null) {
+            builder.latitude(first.getCoordinates().getLatitude())
+                   .longitude(first.getCoordinates().getLongitude());
         }
-        
-        // Map measurements
-        if (result.getMeasurements() != null) {
-            Double maxPm25 = null;
-            Double maxPm10 = null;
-            String source = null;
-            LocalDateTime lastUpdated = null;
-            
-            for (OpenAqResponse.Measurement measurement : result.getMeasurements()) {
-                String parameter = measurement.getParameter();
-                Double value = measurement.getValue();
-                
-                if (parameter != null && value != null) {
-                    switch (parameter.toLowerCase()) {
-                        case "pm25":
-                            if (maxPm25 == null || value > maxPm25) {
-                                maxPm25 = value;
-                                builder.pm25(value);
-                            }
-                            break;
-                        case "pm10":
-                            if (maxPm10 == null || value > maxPm10) {
-                                maxPm10 = value;
-                                builder.pm10(value);
-                            }
-                            break;
-                        case "o3":
-                            builder.o3(value);
-                            break;
-                        case "no2":
-                            builder.no2(value);
-                            break;
-                        case "so2":
-                            builder.so2(value);
-                            break;
-                        case "co":
-                            builder.co(value);
-                            break;
-                    }
-                }
-                
-                // Get the most recent timestamp and source
-                if (measurement.getLastUpdated() != null) {
-                    if (lastUpdated == null || measurement.getLastUpdated().isAfter(lastUpdated)) {
-                        lastUpdated = measurement.getLastUpdated();
-                        source = measurement.getSourceName();
-                    }
-                }
-            }
-            
-            builder.lastUpdated(lastUpdated);
-            builder.source(source);
-            
-            // Calculate AQI from PM2.5 (primary pollutant in most cases)
-            if (maxPm25 != null) {
-                Integer aqi = calculateAqiFromPm25(maxPm25);
-                builder.aqi(aqi);
-                builder.aqiCategory(getAqiCategory(aqi));
-                builder.primaryPollutant("PM2.5");
-            } else if (maxPm10 != null) {
-                // Fallback to PM10 if PM2.5 not available
-                builder.primaryPollutant("PM10");
-                // Simple approximation: PM10 AQI calculation similar to PM2.5
-                Integer aqi = (int) Math.round(maxPm10 * 0.5);
-                builder.aqi(aqi);
-                builder.aqiCategory(getAqiCategory(aqi));
+
+        // Scan flat list for PM2.5, PM10, NO2, O3, SO2, CO
+        Double pm25 = null;
+        Double pm10 = null;
+
+        for (OpenAqResponse.V3Measurement m : response.getResults()) {
+            if (m.getParameter() == null || m.getValue() == null || m.getValue() < 0) continue;
+            switch (m.getParameter().toLowerCase()) {
+                case "pm25": if (pm25 == null) pm25 = m.getValue(); builder.pm25(m.getValue()); break;
+                case "pm10": if (pm10 == null) pm10 = m.getValue(); builder.pm10(m.getValue()); break;
+                case "o3":   builder.o3(m.getValue());   break;
+                case "no2":  builder.no2(m.getValue());  break;
+                case "so2":  builder.so2(m.getValue());  break;
+                case "co":   builder.co(m.getValue());   break;
+                default: break;
             }
         }
-        
+
+        // Calculate AQI from PM2.5 (preferred), fall back to PM10
+        if (pm25 != null) {
+            Integer aqi = calculateAqiFromPm25(pm25);
+            builder.aqi(aqi).aqiCategory(getAqiCategory(aqi)).primaryPollutant("PM2.5");
+        } else if (pm10 != null) {
+            Integer aqi = (int) Math.round(pm10 * 0.5);
+            builder.aqi(aqi).aqiCategory(getAqiCategory(aqi)).primaryPollutant("PM10");
+        } else {
+            return null; // No usable pollutant data
+        }
+
         return builder.build();
     }
 
     /**
-     * OpenAQ API Response Structure
-     * 
-     * Internal class for deserializing the JSON response from OpenAQ API.
+     * OpenAQ API v3 Response Structure (flat measurements format)
+     *
+     * v3 /measurements endpoint returns one measurement object per result,
+     * unlike v2 /latest which grouped measurements by location.
      */
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class OpenAqResponse {
-        
-        private List<Result> results;
-        
+
+        private List<V3Measurement> results;
+
         @Data
         @NoArgsConstructor
         @AllArgsConstructor
         @JsonIgnoreProperties(ignoreUnknown = true)
-        public static class Result {
+        public static class V3Measurement {
+            /** Measurement ID */
+            private Long id;
+            /** Station/location ID */
+            private Long locationId;
+            /** Station name */
             private String location;
-            private String city;
+            /** Parameter name: "pm25", "pm10", "no2", "o3", "so2", "co" */
+            private String parameter;
+            /** Measured value in the corresponding unit */
+            private Double value;
+            /** Unit string (e.g. "\u00b5g/m\u00b3") */
+            private String unit;
+            /** Country ISO code */
             private String country;
-            
+            /** City name */
+            private String city;
+            /** Timestamp wrapper */
+            private V3Date date;
+            /** GPS coordinates of the station */
             private Coordinates coordinates;
-            
-            private List<Measurement> measurements;
-            
+
+            @Data
+            @NoArgsConstructor
+            @AllArgsConstructor
+            @JsonIgnoreProperties(ignoreUnknown = true)
+            public static class V3Date {
+                private String utc;
+                private String local;
+            }
+
             @Data
             @NoArgsConstructor
             @AllArgsConstructor
@@ -287,22 +271,6 @@ public class AirQualityDTO {
                 private Double latitude;
                 private Double longitude;
             }
-        }
-        
-        @Data
-        @NoArgsConstructor
-        @AllArgsConstructor
-        @JsonIgnoreProperties(ignoreUnknown = true)
-        public static class Measurement {
-            private String parameter;
-            private Double value;
-            private String unit;
-            
-            @JsonProperty("lastUpdated")
-            private LocalDateTime lastUpdated;
-            
-            @JsonProperty("sourceName")
-            private String sourceName;
         }
     }
 }

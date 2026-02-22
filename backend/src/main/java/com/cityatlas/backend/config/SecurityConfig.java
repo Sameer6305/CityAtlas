@@ -1,7 +1,9 @@
 package com.cityatlas.backend.config;
 
 import java.util.Arrays;
+import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -34,6 +36,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    @Value("${cityatlas.cors.allowed-origins:http://localhost:3000,http://localhost:3001}")
+    private String corsAllowedOrigins;
 
     /**
      * Security Filter Chain Configuration
@@ -107,22 +112,17 @@ public class SecurityConfig {
 
     /**
      * CORS Configuration
-     * 
-     * Allows frontend (Next.js) running on localhost:3001 to access backend API
-     * 
-     * TODO: Production - Restrict to actual frontend domain
+     *
+     * Origins are driven by the `cityatlas.cors.allowed-origins` property (comma-separated).
+     * Override via env var: CITYATLAS_CORS_ALLOWED_ORIGINS=https://yourdomain.com
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        
-        // Allowed origins - Development: localhost frontend
-        // TODO: Production - Replace with actual domain(s)
-        configuration.setAllowedOrigins(Arrays.asList(
-            "http://localhost:3000",
-            "http://localhost:3001",
-            "http://localhost:3002"
-        ));
+
+        // Parse comma-separated origins from config / env var
+        List<String> origins = Arrays.asList(corsAllowedOrigins.split(","));
+        configuration.setAllowedOrigins(origins);
         
         // Allowed HTTP methods
         configuration.setAllowedMethods(Arrays.asList(

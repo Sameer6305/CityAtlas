@@ -83,29 +83,29 @@ public class AirQualityService {
         String apiKey = hasApiKey ? apiConfig.getOpenaq().getApiKey() : null;
         String baseUrl = apiConfig.getOpenaq().getBaseUrl();
 
+        // OpenAQ v3 requires an API key — public access was removed
         if (!hasApiKey) {
-            log.debug("OpenAQ API key not configured. Attempting public access for: {}", cityName);
-        } else {
-            log.debug("Fetching air quality for city: {} (authenticated)", cityName);
+            log.warn("OpenAQ API key not configured. Air quality data is unavailable (v3 requires a key). "
+                + "Register at https://explore.openaq.org/register and set OPENAQ_API_KEY.");
+            return Mono.empty();
         }
 
-        // Build WebClient with optional API key header
+        log.debug("Fetching air quality for city: {} (v3 authenticated)", cityName);
+
+        // Build WebClient with API key header
         WebClient.RequestHeadersSpec<?> requestSpec = webClient.mutate()
             .baseUrl(baseUrl)
             .build()
             .get()
             .uri(uriBuilder -> uriBuilder
-                .path("/latest")
-                .queryParam("city", cityName)
-                .queryParam("limit", "1")
-                .queryParam("order_by", "lastUpdated")
-                .queryParam("sort", "desc")
-                .build());
-
-        // Add API key header if available
-        if (hasApiKey) {
-            requestSpec = requestSpec.header("X-API-Key", apiKey);
-        }
+                .path("/measurements")
+                .queryParam("cities[]", cityName)
+                .queryParam("parameters[]", "pm25")
+                .queryParam("limit", "5")
+                .queryParam("order_by", "datetime")
+                .queryParam("sort_order", "desc")
+                .build())
+            .header("X-API-Key", apiKey);
 
         return requestSpec
             .retrieve()
@@ -214,6 +214,11 @@ public class AirQualityService {
         String apiKey = hasApiKey ? apiConfig.getOpenaq().getApiKey() : null;
         String baseUrl = apiConfig.getOpenaq().getBaseUrl();
 
+        if (!hasApiKey) {
+            log.warn("OpenAQ API key not configured. Air quality by coordinates unavailable.");
+            return Mono.empty();
+        }
+
         log.debug("Fetching air quality for coordinates: {}, {} (radius: {}km)", 
             latitude, longitude, radiusKm != null ? radiusKm : 25);
 
@@ -223,22 +228,20 @@ public class AirQualityService {
             .get()
             .uri(uriBuilder -> {
                 var builder = uriBuilder
-                    .path("/latest")
+                    .path("/measurements")
                     .queryParam("coordinates", String.format("%f,%f", latitude, longitude))
-                    .queryParam("limit", "1")
-                    .queryParam("order_by", "lastUpdated")
-                    .queryParam("sort", "desc");
-                
-                if (radiusKm != null) {
-                    builder.queryParam("radius", radiusKm * 1000); // Convert to meters
-                }
-                
-                return builder.build();
-            });
+                    .queryParam("parameters[]", "pm25")
+                    .queryParam("limit", "5")
+                    .queryParam("order_by", "datetime")
+                    .queryParam("sort_order", "desc");
 
-        if (hasApiKey) {
-            requestSpec = requestSpec.header("X-API-Key", apiKey);
-        }
+                if (radiusKm != null) {
+                    builder.queryParam("radius", radiusKm * 1000); // Convert km to meters
+                }
+
+                return builder.build();
+            })
+            .header("X-API-Key", apiKey);
 
         return requestSpec
             .retrieve()
@@ -275,19 +278,21 @@ public class AirQualityService {
     }
 
     /**
-     * Check if the air quality service is properly configured
-     * 
-     * Note: OpenAQ may work without API key (public access), so this returns true
-     * even if key is not configured, just logs a warning.
-     * 
-     * @return true always (service available with or without key)
+     * Check if the air quality service is properly configured.
+     *
+     * OpenAQ v3 removed all public (unauthenticated) access, so an API key is
+     * mandatory. Returns {@code false} when no key is present so callers can
+     * gracefully skip AQI enrichment rather than hitting a 401.
+     *
+     * @return true only when a real API key is configured
      */
     public boolean isConfigured() {
         boolean hasKey = !apiConfig.getOpenaq().isPlaceholder();
         if (!hasKey) {
-            log.debug("OpenAQ API key not configured. Public access will be used (rate limited).");
+            log.warn("OpenAQ API key not configured. AQI data will not be available. "
+                + "Register at https://explore.openaq.org/register");
         }
-        return true; // Service is always available, with or without key
+        return hasKey;
     }
 
     /**

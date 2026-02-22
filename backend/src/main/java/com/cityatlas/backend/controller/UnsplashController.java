@@ -62,7 +62,7 @@ import java.util.Map;
  * @see CityImageService
  */
 @RestController
-@RequestMapping("/api/images")
+@RequestMapping("/images")
 public class UnsplashController {
     
     private static final Logger logger = LoggerFactory.getLogger(UnsplashController.class);
