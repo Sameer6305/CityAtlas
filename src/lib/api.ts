@@ -1,11 +1,29 @@
 /**
  * CityAtlas API Client
  * 
- * Fetches real data from the backend API.
- * Backend sources: GeoDB Cities, World Bank, OpenAQ, OpenWeatherMap.
+ * Fetches real data from the backend API with in-memory caching.
+ * Backend sources: GeoDB Cities, World Bank, Open-Meteo AQ, OpenWeatherMap.
  */
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+
+// ── Client-side in-memory cache ──────────────────────────────────────────
+// Prevents redundant network requests when navigating between tabs/pages.
+// TTL: 5 minutes (backend Caffeine cache handles long-term caching at 6h).
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const cache = new Map<string, { data: unknown; ts: number }>();
+
+function getCached<T>(key: string): T | undefined {
+  const entry = cache.get(key);
+  if (entry && Date.now() - entry.ts < CACHE_TTL_MS) return entry.data as T;
+  if (entry) cache.delete(key);
+  return undefined;
+}
+
+function setCache<T>(key: string, data: T): T {
+  cache.set(key, { data, ts: Date.now() });
+  return data;
+}
 
 export interface CityData {
   id: number;
@@ -42,7 +60,7 @@ export interface CityData {
   weatherIcon: string | null;
   weatherHumidity: number | null;
   weatherWindSpeed: number | null;
-  // Live Air Quality — OpenAQ (city-level)
+  // Live Air Quality — Open-Meteo (city-level)
   airQualityIndex: number | null;
   airQualityCategory: string | null;
   pm25: number | null;
@@ -59,15 +77,18 @@ export interface AnalyticsData {
 
 /**
  * Fetch city profile data from backend.
- * Data sourced from GeoDB Cities API + World Bank API.
+ * Uses in-memory cache (5min TTL) to avoid redundant requests on tab navigation.
  */
 export async function fetchCityData(slug: string): Promise<CityData | null> {
+  const key = `city:${slug}`;
+  const cached = getCached<CityData>(key);
+  if (cached) return cached;
+
   try {
-    const res = await fetch(`${API_BASE}/cities/${slug}`, {
-      next: { revalidate: 3600 }, // Cache for 1 hour
-    });
+    const res = await fetch(`${API_BASE}/cities/${slug}`);
     if (!res.ok) return null;
-    return await res.json();
+    const data: CityData = await res.json();
+    return setCache(key, data);
   } catch (err) {
     console.error('Failed to fetch city data:', err);
     return null;
@@ -76,15 +97,18 @@ export async function fetchCityData(slug: string): Promise<CityData | null> {
 
 /**
  * Fetch analytics data from backend.
- * Population from World Bank API. AQI/jobs/cost may be empty if no source.
+ * Uses in-memory cache (5min TTL) to avoid redundant requests.
  */
 export async function fetchAnalyticsData(slug: string): Promise<AnalyticsData | null> {
+  const key = `analytics:${slug}`;
+  const cached = getCached<AnalyticsData>(key);
+  if (cached) return cached;
+
   try {
-    const res = await fetch(`${API_BASE}/cities/${slug}/analytics`, {
-      next: { revalidate: 3600 },
-    });
+    const res = await fetch(`${API_BASE}/cities/${slug}/analytics`);
     if (!res.ok) return null;
-    return await res.json();
+    const data: AnalyticsData = await res.json();
+    return setCache(key, data);
   } catch (err) {
     console.error('Failed to fetch analytics data:', err);
     return null;

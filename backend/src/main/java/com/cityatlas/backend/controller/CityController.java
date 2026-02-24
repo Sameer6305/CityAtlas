@@ -126,27 +126,4 @@ public class CityController {
         
         return ResponseEntity.ok(city);
     }
-    
-    // ============================================
-    // Utility Methods
-    // ============================================
-    
-    /**
-     * Helper: Convert URL slug to display name
-     * Example: "san-francisco" -> "San Francisco"
-     */
-    private String convertSlugToName(String slug) {
-        String[] words = slug.split("-");
-        StringBuilder name = new StringBuilder();
-        
-        for (String word : words) {
-            if (name.length() > 0) {
-                name.append(" ");
-            }
-            name.append(word.substring(0, 1).toUpperCase())
-                .append(word.substring(1).toLowerCase());
-        }
-        
-        return name.toString();
-    }
 }

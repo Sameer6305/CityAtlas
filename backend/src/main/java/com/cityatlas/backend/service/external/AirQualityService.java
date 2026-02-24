@@ -1,6 +1,7 @@
 package com.cityatlas.backend.service.external;
 
 import java.time.Duration;
+import java.util.List;
 
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatusCode;
@@ -10,297 +11,245 @@ import org.springframework.web.reactive.function.client.WebClient;
 import com.cityatlas.backend.config.ExternalApiConfig;
 import com.cityatlas.backend.dto.response.AirQualityDTO;
 import com.cityatlas.backend.exception.ExternalApiException;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
 /**
- * Air Quality Service - OpenAQ API Integration
- * 
- * Provides real-time air quality data integration with OpenAQ API.
- * OpenAQ aggregates air quality data from monitoring stations worldwide.
- * 
- * Features:
- * - Fetches latest AQI (Air Quality Index) data by city
- * - Supports both public access and API key-based authentication
- * - Maps pollutant concentrations (PM2.5, PM10, O3, NO2, SO2, CO)
- * - Calculates AQI from PM2.5 measurements
- * - Handles missing data gracefully
- * - Does NOT fail application startup if API key is missing
- * 
- * OpenAQ API Notes:
- * - API v2 may work without key for basic queries (rate limited)
- * - API key increases rate limits and provides better access
- * - Some endpoints require authentication
- * 
- * Configuration:
- * - API key read from environment variable: OPENAQ_API_KEY
- * - Base URL configured in application.properties
- * - Timeouts and retry settings from ExternalApiConfig
- * 
- * @see AirQualityDTO
- * @see ExternalApiConfig
+ * Air Quality Service — Open-Meteo Air Quality API
+ *
+ * Uses the completely free Open-Meteo air quality API backed by the
+ * Copernicus Atmosphere Monitoring Service (CAMS) — no API key or account needed.
+ *
+ * Data provided: PM2.5, PM10, NO2, SO2, O3, CO, European AQI
+ *
+ * Endpoints used:
+ *  - Air quality: https://air-quality-api.open-meteo.com/v1/air-quality
+ *  - City geocoding: https://geocoding-api.open-meteo.com/v1/search
+ *
+ * @see <a href="https://open-meteo.com/en/docs/air-quality-api">Open-Meteo Air Quality API</a>
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class AirQualityService {
 
+    private static final String OPEN_METEO_AQ_BASE  = "https://air-quality-api.open-meteo.com/v1";
+    private static final String OPEN_METEO_GEO_BASE = "https://geocoding-api.open-meteo.com/v1";
+
+    /** Comma-separated fields to request from the current-conditions endpoint */
+    private static final String AQ_PARAMS =
+        "pm10,pm2_5,nitrogen_dioxide,sulphur_dioxide,ozone,carbon_monoxide,european_aqi";
+
     private final WebClient webClient;
-    private final ExternalApiConfig apiConfig;
+    private final ExternalApiConfig apiConfig; // used for retry/timeout config only
+
+    // =========================================================================
+    // Public API
+    // =========================================================================
 
     /**
-     * Fetch latest air quality data for a city
-     * 
-     * This method handles both public and authenticated access:
-     * - If API key configured: Sends X-API-Key header for authenticated access
-     * - If API key not configured: Tries public access (may be rate limited)
-     * 
-     * If no data is available or API fails, returns Mono.empty() instead of failing,
-     * allowing graceful degradation of the application.
-     * 
-     * Caching:
-     * - Results are cached with key = cityName
-     * - Cache name: "airQuality"
-     * - Reduces API calls and respects rate limits
-     * - Cache works even if empty (transparent to caller)
-     * 
-     * @param cityName City name to fetch air quality for (e.g., "Paris", "Delhi")
-     * @return Mono containing AirQualityDTO if data available, empty Mono otherwise
+     * Fetch air quality for a city name.
+     * Resolves coordinates via Open-Meteo geocoding, then queries air-quality endpoint.
+     * Cached by city name for 15 minutes (see CacheConfig).
      */
     @Cacheable(value = "airQuality", key = "#cityName", unless = "#result == null")
     public Mono<AirQualityDTO> fetchAirQuality(String cityName) {
-        // Validate input
         if (cityName == null || cityName.isBlank()) {
-            log.error("City name is required for air quality fetch");
             return Mono.error(new IllegalArgumentException("City name cannot be null or empty"));
         }
+        log.debug("Fetching air quality for city: {}", cityName);
 
-        // Check if API key is configured
-        boolean hasApiKey = !apiConfig.getOpenaq().isPlaceholder();
-        String apiKey = hasApiKey ? apiConfig.getOpenaq().getApiKey() : null;
-        String baseUrl = apiConfig.getOpenaq().getBaseUrl();
-
-        // OpenAQ v3 requires an API key — public access was removed
-        if (!hasApiKey) {
-            log.warn("OpenAQ API key not configured. Air quality data is unavailable (v3 requires a key). "
-                + "Register at https://explore.openaq.org/register and set OPENAQ_API_KEY.");
-            return Mono.empty();
-        }
-
-        log.debug("Fetching air quality for city: {} (v3 authenticated)", cityName);
-
-        // Build WebClient with API key header
-        WebClient.RequestHeadersSpec<?> requestSpec = webClient.mutate()
-            .baseUrl(baseUrl)
-            .build()
-            .get()
-            .uri(uriBuilder -> uriBuilder
-                .path("/measurements")
-                .queryParam("cities[]", cityName)
-                .queryParam("parameters[]", "pm25")
-                .queryParam("limit", "5")
-                .queryParam("order_by", "datetime")
-                .queryParam("sort_order", "desc")
-                .build())
-            .header("X-API-Key", apiKey);
-
-        return requestSpec
-            .retrieve()
-            // Handle error responses
-            .onStatus(HttpStatusCode::isError, response -> 
-                response.bodyToMono(String.class)
-                    .flatMap(errorBody -> {
-                        log.error("OpenAQ API error: status={}, body={}", 
-                            response.statusCode(), errorBody);
-                        
-                        // Create meaningful error message
-                        String errorMessage;
-                        if (response.statusCode().value() == 404) {
-                            errorMessage = "No air quality data found for city: " + cityName;
-                        } else if (response.statusCode().value() == 401 || response.statusCode().value() == 403) {
-                            errorMessage = "Authentication failed. Check OPENAQ_API_KEY";
-                        } else if (response.statusCode().value() == 429) {
-                            errorMessage = "Rate limit exceeded. Set OPENAQ_API_KEY for higher limits";
-                        } else {
-                            errorMessage = "Failed to fetch air quality: " + errorBody;
-                        }
-                        
-                        return Mono.error(new ExternalApiException(
-                            "OpenAQ",
-                            response.statusCode(),
-                            errorMessage
-                        ));
-                    })
-            )
-            // Deserialize JSON response
-            .bodyToMono(AirQualityDTO.OpenAqResponse.class)
-            // Map to simplified DTO
-            .map(AirQualityDTO::fromOpenAqResponse)
-            // Handle case where no data is available
-            .flatMap(airQuality -> {
-                if (airQuality == null) {
-                    log.warn("No air quality data available for city: {}", cityName);
-                    return Mono.empty();
-                }
-                return Mono.just(airQuality);
+        return geocodeCity(cityName)
+            .flatMap(geo ->
+                fetchFromOpenMeteo(geo.getLatitude(), geo.getLongitude())
+                    .map(dto -> dto.toBuilder()
+                        .location(geo.getName())
+                        .city(geo.getName())
+                        .country(geo.getCountryCode())
+                        .latitude(geo.getLatitude())
+                        .longitude(geo.getLongitude())
+                        .build()))
+            .doOnSuccess(r -> {
+                if (r != null) log.info("AQI for {}: {} ({})", cityName, r.getAqi(), r.getAqiCategory());
             })
-            // Retry transient failures
-            .retryWhen(Retry.backoff(
-                apiConfig.getRetry().getMaxAttempts(), 
-                Duration.ofMillis(apiConfig.getRetry().getBackoffMs())
-            )
-            .filter(throwable -> {
-                // Only retry retryable errors
-                if (throwable instanceof ExternalApiException) {
-                    ExternalApiException apiEx = (ExternalApiException) throwable;
-                    boolean shouldRetry = apiEx.isRetryable();
-                    log.debug("ExternalApiException: retryable={}", shouldRetry);
-                    return shouldRetry;
-                }
-                // Retry network errors, timeouts
-                return true;
-            })
-            .doBeforeRetry(retrySignal -> 
-                log.warn("Retrying OpenAQ API call (attempt {}/{})", 
-                    retrySignal.totalRetries() + 1, 
-                    apiConfig.getRetry().getMaxAttempts())
-            ))
-            // Handle errors gracefully - return empty instead of failing
-            .onErrorResume(throwable -> {
-                // For non-retryable errors or after max retries, log and return empty
-                // This prevents application crashes when air quality data is unavailable
-                if (throwable instanceof ExternalApiException) {
-                    ExternalApiException apiEx = (ExternalApiException) throwable;
-                    if (apiEx.isClientError()) {
-                        log.warn("Air quality data not available for city: {} - {}", 
-                            cityName, apiEx.getMessage());
-                    } else {
-                        log.error("Failed to fetch air quality for city: {}", cityName, throwable);
-                    }
-                } else {
-                    log.error("Unexpected error fetching air quality for city: {}", cityName, throwable);
-                }
+            .onErrorResume(e -> {
+                log.warn("Air quality unavailable for '{}': {}", cityName, e.getMessage());
                 return Mono.empty();
-            })
-            .doOnSuccess(result -> {
-                if (result != null) {
-                    log.info("Successfully fetched air quality for city: {} - AQI: {} ({})", 
-                        cityName, result.getAqi(), result.getAqiCategory());
-                }
             });
     }
 
     /**
-     * Fetch air quality by coordinates (latitude, longitude)
-     * 
-     * Useful for precise location-based queries.
-     * 
-     * @param latitude Latitude coordinate
-     * @param longitude Longitude coordinate
-     * @param radiusKm Search radius in kilometers
-     * @return Mono containing AirQualityDTO if data available, empty Mono otherwise
+     * Fetch air quality directly by coordinates — preferred path (no geocoding needed).
+     *
+     * @param radiusKm ignored — Open-Meteo interpolates from nearest station automatically
      */
-    public Mono<AirQualityDTO> fetchAirQualityByCoordinates(Double latitude, Double longitude, Integer radiusKm) {
-        // Validate input
+    public Mono<AirQualityDTO> fetchAirQualityByCoordinates(
+            Double latitude, Double longitude, Integer radiusKm) {
+
         if (latitude == null || longitude == null) {
-            log.error("Latitude and longitude are required for air quality fetch");
             return Mono.error(new IllegalArgumentException("Coordinates cannot be null"));
         }
+        log.debug("Fetching air quality for coordinates: {}, {}", latitude, longitude);
 
-        boolean hasApiKey = !apiConfig.getOpenaq().isPlaceholder();
-        String apiKey = hasApiKey ? apiConfig.getOpenaq().getApiKey() : null;
-        String baseUrl = apiConfig.getOpenaq().getBaseUrl();
-
-        if (!hasApiKey) {
-            log.warn("OpenAQ API key not configured. Air quality by coordinates unavailable.");
-            return Mono.empty();
-        }
-
-        log.debug("Fetching air quality for coordinates: {}, {} (radius: {}km)", 
-            latitude, longitude, radiusKm != null ? radiusKm : 25);
-
-        WebClient.RequestHeadersSpec<?> requestSpec = webClient.mutate()
-            .baseUrl(baseUrl)
-            .build()
-            .get()
-            .uri(uriBuilder -> {
-                var builder = uriBuilder
-                    .path("/measurements")
-                    .queryParam("coordinates", String.format("%f,%f", latitude, longitude))
-                    .queryParam("parameters[]", "pm25")
-                    .queryParam("limit", "5")
-                    .queryParam("order_by", "datetime")
-                    .queryParam("sort_order", "desc");
-
-                if (radiusKm != null) {
-                    builder.queryParam("radius", radiusKm * 1000); // Convert km to meters
-                }
-
-                return builder.build();
+        return fetchFromOpenMeteo(latitude, longitude)
+            .map(dto -> dto.toBuilder().latitude(latitude).longitude(longitude).build())
+            .doOnSuccess(r -> {
+                if (r != null) log.info("AQI at ({},{}): {} ({})", latitude, longitude, r.getAqi(), r.getAqiCategory());
             })
-            .header("X-API-Key", apiKey);
-
-        return requestSpec
-            .retrieve()
-            .onStatus(HttpStatusCode::isError, response -> 
-                response.bodyToMono(String.class)
-                    .flatMap(errorBody -> Mono.error(new ExternalApiException(
-                        "OpenAQ",
-                        response.statusCode(),
-                        "Failed to fetch air quality by coordinates: " + errorBody
-                    )))
-            )
-            .bodyToMono(AirQualityDTO.OpenAqResponse.class)
-            .map(AirQualityDTO::fromOpenAqResponse)
-            .flatMap(airQuality -> airQuality != null ? Mono.just(airQuality) : Mono.empty())
-            .retryWhen(Retry.backoff(
-                apiConfig.getRetry().getMaxAttempts(), 
-                Duration.ofMillis(apiConfig.getRetry().getBackoffMs())
-            )
-            .filter(throwable -> 
-                throwable instanceof ExternalApiException && 
-                ((ExternalApiException) throwable).isRetryable()
-            ))
-            .onErrorResume(throwable -> {
-                log.error("Failed to fetch air quality by coordinates: {}, {}", 
-                    latitude, longitude, throwable);
+            .onErrorResume(e -> {
+                log.warn("Air quality unavailable at ({},{}): {}", latitude, longitude, e.getMessage());
                 return Mono.empty();
-            })
-            .doOnSuccess(result -> {
-                if (result != null) {
-                    log.info("Successfully fetched air quality for coordinates {}, {} - AQI: {}", 
-                        latitude, longitude, result.getAqi());
-                }
             });
     }
 
-    /**
-     * Check if the air quality service is properly configured.
-     *
-     * OpenAQ v3 removed all public (unauthenticated) access, so an API key is
-     * mandatory. Returns {@code false} when no key is present so callers can
-     * gracefully skip AQI enrichment rather than hitting a 401.
-     *
-     * @return true only when a real API key is configured
-     */
-    public boolean isConfigured() {
-        boolean hasKey = !apiConfig.getOpenaq().isPlaceholder();
-        if (!hasKey) {
-            log.warn("OpenAQ API key not configured. AQI data will not be available. "
-                + "Register at https://explore.openaq.org/register");
-        }
-        return hasKey;
+    /** Always true — Open-Meteo requires no API key. */
+    public boolean isConfigured() { return true; }
+
+    /** Open-Meteo is a free/no-key API — always false. */
+    public boolean hasApiKey() { return false; }
+
+    // =========================================================================
+    // Private helpers
+    // =========================================================================
+
+    private Mono<GeoResult> geocodeCity(String cityName) {
+        return webClient.mutate().baseUrl(OPEN_METEO_GEO_BASE).build()
+            .get()
+            .uri(u -> u.path("/search")
+                .queryParam("name", cityName)
+                .queryParam("count", "1")
+                .queryParam("language", "en")
+                .queryParam("format", "json")
+                .build())
+            .retrieve()
+            .onStatus(HttpStatusCode::isError, r -> r.bodyToMono(String.class)
+                .flatMap(b -> Mono.error(new ExternalApiException("Open-Meteo Geocoding", r.statusCode(), b))))
+            .bodyToMono(GeocodingResponse.class)
+            .flatMap(resp -> {
+                if (resp == null || resp.getResults() == null || resp.getResults().isEmpty()) {
+                    return Mono.error(new RuntimeException("No geocoding result for: " + cityName));
+                }
+                return Mono.just(resp.getResults().get(0));
+            })
+            .retryWhen(retrySpec());
     }
 
-    /**
-     * Check if authenticated access is available (API key configured)
-     * 
-     * @return true if API key is configured, false otherwise
-     */
-    public boolean hasApiKey() {
-        return !apiConfig.getOpenaq().isPlaceholder();
+    private Mono<AirQualityDTO> fetchFromOpenMeteo(double lat, double lon) {
+        return webClient.mutate().baseUrl(OPEN_METEO_AQ_BASE).build()
+            .get()
+            .uri(u -> u.path("/air-quality")
+                .queryParam("latitude", lat)
+                .queryParam("longitude", lon)
+                .queryParam("current", AQ_PARAMS)
+                .build())
+            .retrieve()
+            .onStatus(HttpStatusCode::isError, r -> r.bodyToMono(String.class)
+                .flatMap(b -> Mono.error(new ExternalApiException("Open-Meteo AQ", r.statusCode(), b))))
+            .bodyToMono(OpenMeteoAqResponse.class)
+            .flatMap(r -> {
+                AirQualityDTO dto = mapToDto(r);
+                return dto != null ? Mono.just(dto) : Mono.empty();
+            })
+            .retryWhen(retrySpec());
+    }
+
+    private static AirQualityDTO mapToDto(OpenMeteoAqResponse r) {
+        if (r == null || r.getCurrent() == null) return null;
+        OpenMeteoAqResponse.Current c = r.getCurrent();
+
+        Double pm25 = c.getPm2_5();
+        Double pm10 = c.getPm10();
+        Integer europeanAqi = c.getEuropean_aqi();
+
+        Integer aqi;
+        String primaryPollutant;
+
+        if (europeanAqi != null && europeanAqi >= 0) {
+            // Use European AQI directly — most accurate, from CAMS satellites
+            aqi = europeanAqi;
+            primaryPollutant = pm25 != null ? "PM2.5" : (pm10 != null ? "PM10" : "AQI");
+        } else if (pm25 != null) {
+            aqi = AirQualityDTO.calculateAqiFromPm25(pm25);
+            primaryPollutant = "PM2.5";
+        } else if (pm10 != null) {
+            aqi = (int) Math.round(pm10 * 0.5);
+            primaryPollutant = "PM10";
+        } else {
+            return null;
+        }
+
+        return AirQualityDTO.builder()
+            .pm25(pm25)
+            .pm10(pm10)
+            .no2(c.getNitrogen_dioxide())
+            .so2(c.getSulphur_dioxide())
+            .o3(c.getOzone())
+            .co(c.getCarbon_monoxide())
+            .aqi(aqi)
+            .aqiCategory(AirQualityDTO.getAqiCategory(aqi))
+            .primaryPollutant(primaryPollutant)
+            .source("Open-Meteo / CAMS")
+            .build();
+    }
+
+    private Retry retrySpec() {
+        return Retry.backoff(
+                apiConfig.getRetry().getMaxAttempts(),
+                Duration.ofMillis(apiConfig.getRetry().getBackoffMs()))
+            .filter(t -> !(t instanceof ExternalApiException)
+                || ((ExternalApiException) t).isRetryable());
+    }
+
+    // =========================================================================
+    // Response POJOs — Open-Meteo
+    // =========================================================================
+
+    @Data
+    @NoArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    static class OpenMeteoAqResponse {
+        private Double latitude;
+        private Double longitude;
+        private Current current;
+
+        @Data
+        @NoArgsConstructor
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        static class Current {
+            private Double pm10;
+            private Double pm2_5;
+            private Double carbon_monoxide;
+            private Double nitrogen_dioxide;
+            private Double sulphur_dioxide;
+            private Double ozone;
+            private Integer european_aqi;
+        }
+    }
+
+    @Data
+    @NoArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    static class GeocodingResponse {
+        private List<GeoResult> results;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    static class GeoResult {
+        private String name;
+        private Double latitude;
+        private Double longitude;
+        private String country;
+        @JsonProperty("country_code")
+        private String countryCode;
+        private String admin1;
     }
 }

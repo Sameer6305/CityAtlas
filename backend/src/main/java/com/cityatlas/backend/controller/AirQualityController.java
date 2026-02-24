@@ -1,12 +1,17 @@
 package com.cityatlas.backend.controller;
 
-import com.cityatlas.backend.dto.response.AirQualityDTO;
-import com.cityatlas.backend.service.external.AirQualityService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.cityatlas.backend.dto.response.AirQualityDTO;
+import com.cityatlas.backend.service.external.AirQualityService;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 /**
@@ -133,16 +138,13 @@ public class AirQualityController {
      */
     @GetMapping("/status")
     public ResponseEntity<ServiceStatusResponse> getServiceStatus() {
-        boolean hasApiKey = airQualityService.hasApiKey();
         boolean isConfigured = airQualityService.isConfigured();
         
         ServiceStatusResponse response = ServiceStatusResponse.builder()
-            .service("OpenAQ")
+            .service("Open-Meteo")
             .configured(isConfigured)
-            .authenticated(hasApiKey)
-            .message(hasApiKey 
-                ? "Air quality service is configured with API key (higher rate limits)" 
-                : "Air quality service using public access (rate limited). Set OPENAQ_API_KEY for better access.")
+            .authenticated(false)
+            .message("Air quality service powered by Open-Meteo (CAMS data). No API key required.")
             .build();
         
         return ResponseEntity.ok(response);

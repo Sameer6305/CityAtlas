@@ -27,7 +27,7 @@ import lombok.NoArgsConstructor;
  * @see <a href="https://docs.openaq.org/">OpenAQ API Documentation</a>
  */
 @Data
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class AirQualityDTO {

@@ -9,9 +9,9 @@ function Show($label, $status, $note = "") {
     else                        { Write-Host "  [FAIL] $label $note" -ForegroundColor Red;    $script:fail++ }
 }
 
-function Get-Safe($url, $hdrs = @{}) {
+function Get-Safe($url, $hdrs = @{}, $timeoutSec = 10) {
     try {
-        $r = Invoke-WebRequest -Uri $url -Headers $hdrs -UseBasicParsing -TimeoutSec 10 -MaximumRedirection 5 -ErrorAction Stop
+        $r = Invoke-WebRequest -Uri $url -Headers $hdrs -UseBasicParsing -TimeoutSec $timeoutSec -MaximumRedirection 5 -ErrorAction Stop
         return @{ code = [int]$r.StatusCode; body = $r.Content }
     } catch [System.Net.WebException] {
         $resp = $_.Exception.Response
@@ -74,21 +74,10 @@ if ($owmKey -and $owmKey -ne "your_openweather_api_key_here") {
     Show "OpenWeatherMap" "WARN" "(key not configured - set openweather.api-key in application-secrets.properties)"
 }
 
-# OpenAQ v3
-$aqKey = ""
-if (Test-Path $secretsFile) {
-    $line = Get-Content $secretsFile | Where-Object { $_ -match "^cityatlas\.external\.openaq\.api-key=" }
-    if ($line) { $aqKey = $line.Split("=",2)[1].Trim() }
-}
-if ($aqKey -and $aqKey -ne "your_openaq_api_key_here") {
-    $hdrs = @{ "X-API-Key" = $aqKey }
-    $r = Get-Safe "https://api.openaq.org/v3/measurements?cities[]=London&parameters[]=pm25&limit=1" $hdrs
-    if ($r.code -eq 200)   { Show "OpenAQ v3 (key set)" "OK" }
-    elseif ($r.code -eq 401 -or $r.code -eq 403) { Show "OpenAQ v3" "FAIL" "(key invalid)" }
-    else { Show "OpenAQ v3" "WARN" "(HTTP $($r.code))" }
-} else {
-    Show "OpenAQ v3" "WARN" "(key not set - AQI data disabled; register at https://explore.openaq.org/register)"
-}
+# Open-Meteo Air Quality (replaces OpenAQ — no key required)
+$r = Get-Safe "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=51.5&longitude=-0.12&current=pm2_5,european_aqi"
+if ($r.code -eq 200) { Show "Open-Meteo AQ (no key)" "OK" }
+else { Show "Open-Meteo AQ" "WARN" "(HTTP $($r.code))" }
 
 # Unsplash
 $unsplashKey = ""
@@ -109,7 +98,7 @@ if ($unsplashKey -and $unsplashKey -ne "your_unsplash_access_key_here") {
 Write-Host ""
 Write-Host "[ Backend city endpoints ]" -ForegroundColor Cyan
 $city = "london"
-$r = Get-Safe "$BackendBase/cities/$city"
+$r = Get-Safe "$BackendBase/cities/$city" @{} 45
 if ($r.code -eq 200) {
     $hasNull = $r.body -match '"population":null|"gdp":null|"aqi":null'
     if ($hasNull) { Show "GET /cities/$city" "WARN" "(200 OK but some fields are null)" }

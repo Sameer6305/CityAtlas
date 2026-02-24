@@ -57,8 +57,8 @@ public class GeoDBCityService {
                     .build())
                 .retrieve()
                 .bodyToMono(Map.class)
-                .retryWhen(Retry.backoff(2, Duration.ofSeconds(2)))
-                .timeout(Duration.ofSeconds(15))
+                .timeout(Duration.ofSeconds(8))
+                .retryWhen(Retry.backoff(1, Duration.ofSeconds(1)))
                 .block();
 
             if (response == null || !response.containsKey("data")) {

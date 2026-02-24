@@ -5,7 +5,7 @@
  * Displays real environmental indicators:
  * - Renewable Energy %, CO2 per Capita (World Bank, country-level)
  * - Live Weather: temperature, humidity, wind (OpenWeatherMap, city-level)
- * - Live Air Quality: AQI, PM2.5 (OpenAQ, city-level)
+ * - Live Air Quality: AQI, PM2.5 (Open-Meteo, city-level)
  */
 
 'use client';
@@ -151,13 +151,13 @@ export default function EnvironmentPage() {
         </GlassCard>
       )}
 
-      {/* Live Air Quality — OpenAQ (city-level) */}
+      {/* Live Air Quality — Open-Meteo (city-level) */}
       {hasAqi && city.airQualityIndex != null && (
         <GlassCard className="p-6" delay={100}>
           <div className="flex items-center gap-2 mb-4">
             <span className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-emerald-400 text-xs font-medium uppercase tracking-wider">Live Air Quality</span>
-            <span className="text-white/30 text-xs ml-2">OpenAQ — monitoring stations</span>
+            <span className="text-white/30 text-xs ml-2">Open-Meteo — CAMS satellite data</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className={`text-center p-5 rounded-xl bg-gradient-to-br ${getAqiBg(city.airQualityIndex)} border border-white/10`}>
@@ -227,12 +227,12 @@ export default function EnvironmentPage() {
                 <p><span className="text-emerald-400 font-medium">🟢 Live</span> <span className="text-white font-medium">Weather:</span> OpenWeatherMap API — city-level, refreshed every 15 min</p>
               )}
               {hasAqi && (
-                <p><span className="text-emerald-400 font-medium">🟢 Live</span> <span className="text-white font-medium">Air Quality:</span> OpenAQ — government monitoring stations</p>
+                <p><span className="text-emerald-400 font-medium">🟢 Live</span> <span className="text-white font-medium">Air Quality:</span> Open-Meteo — CAMS European satellite data (free, no API key)</p>
               )}
               <p><span className="text-white font-medium">Renewable Energy:</span> World Bank — EG.FEC.RNEW.ZS (country-level)</p>
               <p><span className="text-white font-medium">CO₂ Emissions:</span> World Bank — EN.ATM.CO2E.PC (country-level)</p>
               {!hasWeather && !hasAqi && (
-                <p className="text-white/40 text-xs italic">Weather & AQI require API keys (OPENWEATHER_API_KEY / OPENAQ_API_KEY). Set them to enable live data.</p>
+                <p className="text-white/40 text-xs italic">Weather requires OPENWEATHER_API_KEY. Air quality is free via Open-Meteo (no key needed).</p>
               )}
               <p className="text-white/40 text-xs pt-2 border-t border-white/5">
                 All data from free, open APIs. No fabricated data.

@@ -4,7 +4,7 @@
  * 
  * Premium glassmorphism dashboard design
  * Shows high-level city information and key metrics.
- * Data sourced from: GeoDB Cities, World Bank, OpenWeatherMap, OpenAQ APIs.
+ * Data sourced from: GeoDB Cities, World Bank, OpenWeatherMap, Open-Meteo APIs.
  */
 
 'use client';
@@ -242,7 +242,7 @@ export default function CityOverviewPage() {
             </GlassCard>
           )}
 
-          {/* Live AQI Badge — from OpenAQ */}
+          {/* Live AQI Badge — from Open-Meteo */}
           {cityData?.airQualityIndex != null && (
             <GlassCard className="p-4" delay={75}>
               <div className="flex items-center justify-between flex-wrap gap-3">
@@ -256,7 +256,7 @@ export default function CityOverviewPage() {
                   </span>
                   <span className="text-white/60">{cityData.airQualityCategory}</span>
                   {cityData.pm25 != null && <span className="text-white/50">PM2.5: {cityData.pm25} μg/m³</span>}
-                  <span className="text-white/30 text-xs">OpenAQ</span>
+                  <span className="text-white/30 text-xs">Open-Meteo</span>
                 </div>
               </div>
             </GlassCard>

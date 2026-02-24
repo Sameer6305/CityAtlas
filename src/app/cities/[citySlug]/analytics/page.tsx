@@ -3,7 +3,7 @@
  * Route: /cities/[citySlug]/analytics
  * 
  * Premium glassmorphism analytics dashboard with scroll-triggered animations.
- * Data sourced from: World Bank API (population), OpenAQ (AQI).
+ * Data sourced from: World Bank API (population), Open-Meteo (AQI).
  * Job sectors and cost of living removed — no free city-level source.
  */
 
@@ -100,7 +100,7 @@ export default function AnalyticsPage() {
   const params = useParams();
   const citySlug = params.citySlug as string;
 
-  // Real data from backend API (World Bank + OpenAQ)
+  // Real data from backend API (World Bank + Open-Meteo)
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -181,13 +181,13 @@ export default function AnalyticsPage() {
         </GlassCard>
       </div>
 
-      {/* Environmental Quality Section — OpenAQ data */}
+      {/* Environmental Quality Section — Open-Meteo data */}
       {aqiData.length > 0 && (
         <div>
           <SectionHeader 
             icon="🌤️" 
             title="Environmental Quality" 
-            description="Air quality data from OpenAQ monitoring stations"
+            description="Air quality data from Open-Meteo CAMS satellite"
             delay={50}
           />
           <GlassCard className="p-6" delay={100}>
@@ -239,7 +239,7 @@ export default function AnalyticsPage() {
                 <span className="text-white font-medium">Population:</span> World Bank Open Data API — country-level indicators updated annually.
               </p>
               <p>
-                <span className="text-white font-medium">Air Quality:</span> OpenAQ API — real-time air quality measurements from government monitoring stations.
+                <span className="text-white font-medium">Air Quality:</span> Open-Meteo API — real-time air quality from CAMS European satellite data.
               </p>
               <p>
                 <span className="text-white font-medium">Update Frequency:</span> Population: Annual | AQI: Real-time (cached 6h)

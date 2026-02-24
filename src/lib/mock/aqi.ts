@@ -2,7 +2,7 @@
  * Mock AQI (Air Quality Index) Data
  * 
  * In production, this would come from:
- * - Environmental monitoring APIs (e.g., OpenAQ, IQAir)
+ * - Environmental monitoring APIs (e.g., Open-Meteo, IQAir)
  * - City government open data portals
  * 
  * API structure: GET /api/cities/:slug/environment/aqi?period=12m

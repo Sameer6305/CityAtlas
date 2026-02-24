@@ -67,9 +67,11 @@ public class SecurityConfig {
             // ============================================
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints (no auth required)
+                // Note: context-path (/api) is stripped by the servlet container,
+                // so matchers here use servlet-relative paths (no /api prefix).
                 .requestMatchers(
-                    "/api/public/**",
-                    "/api/health/**",
+                    "/public/**",
+                    "/health/**",
                     "/actuator/**",
                     "/swagger-ui/**",
                     "/v3/api-docs/**"
@@ -151,8 +153,9 @@ public class SecurityConfig {
         configuration.setMaxAge(3600L);
         
         // Apply configuration to all endpoints
+        // Note: context-path is /api, so servlet-relative paths start at /
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/api/**", configuration);
+        source.registerCorsConfiguration("/**", configuration);
         
         return source;
     }

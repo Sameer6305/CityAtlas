@@ -3,13 +3,17 @@ package com.cityatlas.backend.service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PreDestroy;
+
 import com.cityatlas.backend.dto.response.AirQualityDTO;
 import com.cityatlas.backend.dto.response.AnalyticsResponse;
-import com.cityatlas.backend.dto.response.AnalyticsResponse.AQIDataPoint;
 import com.cityatlas.backend.dto.response.AnalyticsResponse.PopulationDataPoint;
 import com.cityatlas.backend.dto.response.CityResponse;
 import com.cityatlas.backend.dto.response.WeatherDTO;
@@ -22,6 +26,7 @@ import com.cityatlas.backend.service.external.WeatherService;
 import com.cityatlas.backend.service.external.WorldBankService;
 import com.cityatlas.backend.service.external.WorldBankService.YearValue;
 
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -49,8 +54,36 @@ public class CityDataAggregator {
     private final WeatherService weatherService;
     private final AirQualityService airQualityService;
 
+    /** Thread pool for parallelizing external API calls (15+ calls per city request). */
+    private final ExecutorService apiExecutor = Executors.newFixedThreadPool(
+        Math.min(16, Runtime.getRuntime().availableProcessors() * 2)
+    );
+
+    @PreDestroy
+    public void shutdown() {
+        apiExecutor.shutdownNow();
+    }
+
+    /** Helper: safely get the result of a CompletableFuture, returning null on failure. */
+    private <T> T safeGet(CompletableFuture<T> future) {
+        try {
+            return future.join();
+        } catch (Exception e) {
+            log.debug("Parallel fetch failed: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /** Helper: round a nullable Double to N decimal places. */
+    private static Double round(Double val, int decimals) {
+        if (val == null) return null;
+        double factor = Math.pow(10, decimals);
+        return Math.round(val * factor) / factor;
+    }
+
     /**
      * Build a complete CityResponse from real data sources.
+     * All external API calls run in PARALLEL for maximum throughput.
      * Falls back to basic info if any source is unavailable.
      *
      * @param slug URL-friendly city identifier (e.g., "san-francisco")
@@ -58,18 +91,16 @@ public class CityDataAggregator {
      */
     @Cacheable(value = "cityData", key = "#slug", unless = "#result == null")
     public CityResponse buildCityResponse(String slug) {
+        long startMs = System.currentTimeMillis();
         String cityName = convertSlugToName(slug);
         log.info("Building city response for: {} (slug: {})", cityName, slug);
 
-        // Step 1: Get city-level data from GeoDB
+        // ── Step 1: GeoDB (must complete first — provides countryCode & coordinates) ──
         CityInfo cityInfo = geoDBCityService.findCity(cityName);
 
-        String country;
-        String countryCode;
-        String state;
-        Long population;
-        Double latitude;
-        Double longitude;
+        String country = null, countryCode = null, state = null;
+        Long population = null;
+        Double latitude = null, longitude = null;
 
         if (cityInfo != null) {
             country = cityInfo.country();
@@ -80,102 +111,119 @@ public class CityDataAggregator {
             longitude = cityInfo.longitude();
             log.info("GeoDB data found for {}: pop={}, country={}", cityName, population, countryCode);
         } else {
-            // Fallback: basic info only
             log.warn("No GeoDB data for {}. Using slug-derived name only.", cityName);
-            country = null;
-            countryCode = null;
-            state = null;
-            population = null;
-            latitude = null;
-            longitude = null;
         }
 
-        // Step 2: Get country-level economic indicators from World Bank
-        Double gdpPerCapita = null;
-        Double unemploymentRate = null;
-        Double literacyRate = null;
-        Double pupilTeacherRatio = null;
-        Double renewableEnergyPct = null;
-        Double co2PerCapita = null;
-        // Health indicators
-        Double hospitalBedsPer1000 = null;
-        Double healthExpenditurePerCapita = null;
-        Double lifeExpectancy = null;
-        // Infrastructure indicators
-        Double internetUsersPct = null;
-        Double mobileSubscriptionsPer100 = null;
-        Double electricityAccessPct = null;
+        // ── Step 2: Fire ALL remaining calls in PARALLEL ────────────────────────
+        // World Bank (12 indicators), REST Countries (1), Weather (1), AQI (1) = 15 calls
+        // Previously sequential (~3-4s) → now parallel (~0.5-1s)
 
-        java.util.List<String> languages = null;
+        CompletableFuture<Double> fGdp = CompletableFuture.completedFuture(null);
+        CompletableFuture<Double> fUnemployment = CompletableFuture.completedFuture(null);
+        CompletableFuture<Double> fLiteracy = CompletableFuture.completedFuture(null);
+        CompletableFuture<Double> fPupilTeacher = CompletableFuture.completedFuture(null);
+        CompletableFuture<Double> fRenewable = CompletableFuture.completedFuture(null);
+        CompletableFuture<Double> fCo2 = CompletableFuture.completedFuture(null);
+        CompletableFuture<Double> fHospitalBeds = CompletableFuture.completedFuture(null);
+        CompletableFuture<Double> fHealthExpenditure = CompletableFuture.completedFuture(null);
+        CompletableFuture<Double> fLifeExpectancy = CompletableFuture.completedFuture(null);
+        CompletableFuture<Double> fInternetUsers = CompletableFuture.completedFuture(null);
+        CompletableFuture<Double> fMobileSubs = CompletableFuture.completedFuture(null);
+        CompletableFuture<Double> fElectricity = CompletableFuture.completedFuture(null);
+        CompletableFuture<List<String>> fLanguages = CompletableFuture.completedFuture(null);
 
-        if (countryCode != null) {
-            gdpPerCapita = worldBankService.fetchGdpPerCapita(countryCode);
-            unemploymentRate = worldBankService.fetchUnemploymentRate(countryCode);
-            literacyRate = worldBankService.fetchLiteracyRate(countryCode);
-            pupilTeacherRatio = worldBankService.fetchPupilTeacherRatio(countryCode);
-            renewableEnergyPct = worldBankService.fetchRenewableEnergyPct(countryCode);
-            co2PerCapita = worldBankService.fetchCo2PerCapita(countryCode);
-
-            // Health & Safety
-            hospitalBedsPer1000 = worldBankService.fetchHospitalBeds(countryCode);
-            healthExpenditurePerCapita = worldBankService.fetchHealthExpenditure(countryCode);
-            lifeExpectancy = worldBankService.fetchLifeExpectancy(countryCode);
-
-            // Infrastructure & Connectivity
-            internetUsersPct = worldBankService.fetchInternetUsers(countryCode);
-            mobileSubscriptionsPer100 = worldBankService.fetchMobileSubscriptions(countryCode);
-            electricityAccessPct = worldBankService.fetchElectricityAccess(countryCode);
-
-            log.info("World Bank data for {}: GDP/cap={}, unemployment={}%, literacy={}%, lifeExp={}", 
-                countryCode, gdpPerCapita, unemploymentRate, literacyRate, lifeExpectancy);
-
-            // Get languages from REST Countries
-            CountryInfo countryInfo = restCountriesService.fetchCountry(countryCode);
-            if (countryInfo != null && countryInfo.languages() != null) {
-                languages = new ArrayList<>(countryInfo.languages());
-            }
+        final String cc = countryCode; // effectively-final for lambdas
+        if (cc != null) {
+            fGdp = CompletableFuture.supplyAsync(() -> worldBankService.fetchGdpPerCapita(cc), apiExecutor);
+            fUnemployment = CompletableFuture.supplyAsync(() -> worldBankService.fetchUnemploymentRate(cc), apiExecutor);
+            fLiteracy = CompletableFuture.supplyAsync(() -> worldBankService.fetchLiteracyRate(cc), apiExecutor);
+            fPupilTeacher = CompletableFuture.supplyAsync(() -> worldBankService.fetchPupilTeacherRatio(cc), apiExecutor);
+            fRenewable = CompletableFuture.supplyAsync(() -> worldBankService.fetchRenewableEnergyPct(cc), apiExecutor);
+            fCo2 = CompletableFuture.supplyAsync(() -> worldBankService.fetchCo2PerCapita(cc), apiExecutor);
+            fHospitalBeds = CompletableFuture.supplyAsync(() -> worldBankService.fetchHospitalBeds(cc), apiExecutor);
+            fHealthExpenditure = CompletableFuture.supplyAsync(() -> worldBankService.fetchHealthExpenditure(cc), apiExecutor);
+            fLifeExpectancy = CompletableFuture.supplyAsync(() -> worldBankService.fetchLifeExpectancy(cc), apiExecutor);
+            fInternetUsers = CompletableFuture.supplyAsync(() -> worldBankService.fetchInternetUsers(cc), apiExecutor);
+            fMobileSubs = CompletableFuture.supplyAsync(() -> worldBankService.fetchMobileSubscriptions(cc), apiExecutor);
+            fElectricity = CompletableFuture.supplyAsync(() -> worldBankService.fetchElectricityAccess(cc), apiExecutor);
+            fLanguages = CompletableFuture.supplyAsync(() -> {
+                CountryInfo info = restCountriesService.fetchCountry(cc);
+                return (info != null && info.languages() != null) ? new ArrayList<>(info.languages()) : null;
+            }, apiExecutor);
         }
 
-        // Step 3: Fetch live weather from OpenWeatherMap (if configured)
+        // Weather + AQI fire in parallel with World Bank calls
+        final String cn = cityName;
+        final Double lat = latitude, lon = longitude;
+        CompletableFuture<WeatherDTO> fWeather = CompletableFuture.supplyAsync(() -> {
+            try { return weatherService.fetchCurrentWeather(cn).block(); }
+            catch (Exception e) { log.debug("Weather not available for {}: {}", cn, e.getMessage()); return null; }
+        }, apiExecutor);
+
+        CompletableFuture<AirQualityDTO> fAqi = CompletableFuture.supplyAsync(() -> {
+            try {
+                return (lat != null && lon != null)
+                    ? airQualityService.fetchAirQualityByCoordinates(lat, lon, null).block()
+                    : airQualityService.fetchAirQuality(cn).block();
+            } catch (Exception e) { log.debug("AQI not available for {}: {}", cn, e.getMessage()); return null; }
+        }, apiExecutor);
+
+        // ── Step 3: Wait for ALL to complete ──
+        CompletableFuture.allOf(
+            fGdp, fUnemployment, fLiteracy, fPupilTeacher, fRenewable, fCo2,
+            fHospitalBeds, fHealthExpenditure, fLifeExpectancy,
+            fInternetUsers, fMobileSubs, fElectricity,
+            fLanguages, fWeather, fAqi
+        ).join();
+
+        // ── Step 4: Collect results (null-safe) ──
+        Double gdpPerCapita = safeGet(fGdp);
+        Double unemploymentRate = safeGet(fUnemployment);
+        Double literacyRate = safeGet(fLiteracy);
+        Double pupilTeacherRatio = safeGet(fPupilTeacher);
+        Double renewableEnergyPct = safeGet(fRenewable);
+        Double co2PerCapita = safeGet(fCo2);
+        Double hospitalBedsPer1000 = safeGet(fHospitalBeds);
+        Double healthExpenditurePerCapita = safeGet(fHealthExpenditure);
+        Double lifeExpectancy = safeGet(fLifeExpectancy);
+        Double internetUsersPct = safeGet(fInternetUsers);
+        Double mobileSubscriptionsPer100 = safeGet(fMobileSubs);
+        Double electricityAccessPct = safeGet(fElectricity);
+        List<String> languages = safeGet(fLanguages);
+
+        WeatherDTO weather = safeGet(fWeather);
         Double weatherTemp = null;
-        String weatherDescription = null;
-        String weatherIcon = null;
+        String weatherDescription = null, weatherIcon = null;
         Integer weatherHumidity = null;
         Double weatherWindSpeed = null;
-
-        try {
-            WeatherDTO weather = weatherService.fetchCurrentWeather(cityName).block();
-            if (weather != null) {
-                weatherTemp = weather.getTemperature();
-                weatherDescription = weather.getWeatherDescription();
-                weatherIcon = weather.getWeatherIcon();
-                weatherHumidity = weather.getHumidity();
-                weatherWindSpeed = weather.getWindSpeed();
-                log.info("Weather for {}: {}°C, {}", cityName, weatherTemp, weatherDescription);
-            }
-        } catch (Exception e) {
-            log.debug("Weather not available for {}: {}", cityName, e.getMessage());
+        if (weather != null) {
+            weatherTemp = weather.getTemperature();
+            weatherDescription = weather.getWeatherDescription();
+            weatherIcon = weather.getWeatherIcon();
+            weatherHumidity = weather.getHumidity();
+            weatherWindSpeed = weather.getWindSpeed();
         }
 
-        // Step 4: Fetch live air quality from OpenAQ (if available)
+        AirQualityDTO aqi = safeGet(fAqi);
         Integer airQualityIndex = null;
         String airQualityCategory = null;
         Double pm25 = null;
-
-        try {
-            AirQualityDTO aqi = airQualityService.fetchAirQuality(cityName).block();
-            if (aqi != null) {
-                airQualityIndex = aqi.getAqi();
-                airQualityCategory = aqi.getAqiCategory();
-                pm25 = aqi.getPm25();
-                log.info("AQI for {}: {} ({})", cityName, airQualityIndex, airQualityCategory);
-            }
-        } catch (Exception e) {
-            log.debug("AQI not available for {}: {}", cityName, e.getMessage());
+        if (aqi != null) {
+            airQualityIndex = aqi.getAqi();
+            airQualityCategory = aqi.getAqiCategory();
+            pm25 = aqi.getPm25();
         }
 
-        // Step 5: Generate description from real data
+        if (cc != null) {
+            log.info("World Bank data for {}: GDP/cap={}, unemployment={}%, literacy={}%, lifeExp={}",
+                cc, gdpPerCapita, unemploymentRate, literacyRate, lifeExpectancy);
+        }
+
+        // ── Step 5: Assemble response ──
         String description = generateDescription(cityName, state, country, population);
+
+        long elapsed = System.currentTimeMillis() - startMs;
+        log.info("City response built for {} in {}ms (parallel)", cityName, elapsed);
 
         return CityResponse.builder()
             .id(cityInfo != null ? cityInfo.id() : (long) slug.hashCode())
@@ -185,35 +233,31 @@ public class CityDataAggregator {
             .country(country)
             .countryCode(countryCode)
             .population(population)
-            .gdpPerCapita(gdpPerCapita != null ? Math.round(gdpPerCapita * 100.0) / 100.0 : null)
+            .gdpPerCapita(round(gdpPerCapita, 2))
             .latitude(latitude)
             .longitude(longitude)
-            .costOfLivingIndex(null)  // No free source available — intentionally null
-            .unemploymentRate(unemploymentRate != null ? Math.round(unemploymentRate * 10.0) / 10.0 : null)
-            .literacyRate(literacyRate != null ? Math.round(literacyRate * 10.0) / 10.0 : null)
-            .pupilTeacherRatio(pupilTeacherRatio != null ? Math.round(pupilTeacherRatio * 10.0) / 10.0 : null)
-            .renewableEnergyPct(renewableEnergyPct != null ? Math.round(renewableEnergyPct * 10.0) / 10.0 : null)
-            .co2PerCapita(co2PerCapita != null ? Math.round(co2PerCapita * 100.0) / 100.0 : null)
+            .costOfLivingIndex(null)
+            .unemploymentRate(round(unemploymentRate, 1))
+            .literacyRate(round(literacyRate, 1))
+            .pupilTeacherRatio(round(pupilTeacherRatio, 1))
+            .renewableEnergyPct(round(renewableEnergyPct, 1))
+            .co2PerCapita(round(co2PerCapita, 2))
             .languages(languages)
-            // Health & Safety
-            .hospitalBedsPer1000(hospitalBedsPer1000 != null ? Math.round(hospitalBedsPer1000 * 10.0) / 10.0 : null)
-            .healthExpenditurePerCapita(healthExpenditurePerCapita != null ? Math.round(healthExpenditurePerCapita * 100.0) / 100.0 : null)
-            .lifeExpectancy(lifeExpectancy != null ? Math.round(lifeExpectancy * 10.0) / 10.0 : null)
-            // Infrastructure & Connectivity
-            .internetUsersPct(internetUsersPct != null ? Math.round(internetUsersPct * 10.0) / 10.0 : null)
-            .mobileSubscriptionsPer100(mobileSubscriptionsPer100 != null ? Math.round(mobileSubscriptionsPer100 * 10.0) / 10.0 : null)
-            .electricityAccessPct(electricityAccessPct != null ? Math.round(electricityAccessPct * 10.0) / 10.0 : null)
-            // Live Weather
-            .weatherTemp(weatherTemp != null ? Math.round(weatherTemp * 10.0) / 10.0 : null)
+            .hospitalBedsPer1000(round(hospitalBedsPer1000, 1))
+            .healthExpenditurePerCapita(round(healthExpenditurePerCapita, 2))
+            .lifeExpectancy(round(lifeExpectancy, 1))
+            .internetUsersPct(round(internetUsersPct, 1))
+            .mobileSubscriptionsPer100(round(mobileSubscriptionsPer100, 1))
+            .electricityAccessPct(round(electricityAccessPct, 1))
+            .weatherTemp(round(weatherTemp, 1))
             .weatherDescription(weatherDescription)
             .weatherIcon(weatherIcon)
             .weatherHumidity(weatherHumidity)
-            .weatherWindSpeed(weatherWindSpeed != null ? Math.round(weatherWindSpeed * 10.0) / 10.0 : null)
-            // Live Air Quality
+            .weatherWindSpeed(round(weatherWindSpeed, 1))
             .airQualityIndex(airQualityIndex)
             .airQualityCategory(airQualityCategory)
-            .pm25(pm25 != null ? Math.round(pm25 * 10.0) / 10.0 : null)
-            .bannerImageUrl(null)     // Filled by Unsplash service separately
+            .pm25(round(pm25, 1))
+            .bannerImageUrl(null)
             .description(description)
             .lastUpdated(LocalDateTime.now())
             .build();
@@ -221,7 +265,7 @@ public class CityDataAggregator {
 
     /**
      * Build analytics response with real data where available.
-     * Uses World Bank for population trends. AQI data comes from OpenAQ separately.
+     * Uses World Bank for population trends. AQI data comes from Open-Meteo separately.
      * Job sectors and cost of living are REMOVED (no free city-level source).
      *
      * @param slug city slug
@@ -255,13 +299,13 @@ public class CityDataAggregator {
             }
         }
 
-        // NOTE: AQI trend data comes from OpenAQ service (already integrated)
+        // NOTE: AQI trend data comes from Open-Meteo service (already integrated)
         // Job sectors and cost of living are REMOVED — no free city-level source
 
         return AnalyticsResponse.builder()
             .citySlug(slug)
             .cityName(cityName)
-            .aqiTrend(List.of())         // Populated by OpenAQ — frontend will fetch separately
+            .aqiTrend(List.of())         // Populated by Open-Meteo — frontend will fetch separately
             .jobSectors(List.of())        // REMOVED — no free source
             .costOfLiving(List.of())      // REMOVED — no free source
             .populationTrend(populationTrend)

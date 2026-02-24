@@ -61,8 +61,8 @@ public class WorldBankService {
                     .build(countryCode, indicator))
                 .retrieve()
                 .bodyToMono(List.class)
-                .retryWhen(Retry.backoff(2, Duration.ofSeconds(1)))
-                .timeout(Duration.ofSeconds(10))
+                .timeout(Duration.ofSeconds(5))
+                .retryWhen(Retry.backoff(1, Duration.ofMillis(500)))
                 .block();
 
             if (raw == null || raw.size() < 2) {
@@ -114,8 +114,8 @@ public class WorldBankService {
                     .build(countryCode, indicator))
                 .retrieve()
                 .bodyToMono(List.class)
-                .retryWhen(Retry.backoff(2, Duration.ofSeconds(1)))
-                .timeout(Duration.ofSeconds(10))
+                .timeout(Duration.ofSeconds(5))
+                .retryWhen(Retry.backoff(1, Duration.ofMillis(500)))
                 .block();
 
             if (raw == null || raw.size() < 2) {
