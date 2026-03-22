@@ -123,7 +123,7 @@ public final class PromptConstraints {
             500,    // maxPersonalityLength (characters)
             2,      // minStrengths
             6,      // maxStrengths
-            1,      // minWeaknesses
+            0,      // minWeaknesses (cities with healthy scores can legitimately have no weaknesses)
             5,      // maxWeaknesses
             2,      // minAudienceItems
             6,      // maxAudienceItems
