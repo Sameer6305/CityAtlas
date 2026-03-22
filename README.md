@@ -57,11 +57,6 @@ docker compose down -v
 docker compose up -d db
 ```
 
-## Demo Credentials
-
-- Email: `demo@cityatlas.com`
-- Password: `demo123`
-
 ## 📋 Table of Contents
 
 - [Executive Summary](#executive-summary)
