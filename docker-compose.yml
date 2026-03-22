@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: cityatlas
+      POSTGRES_USER: cityatlas
+      POSTGRES_PASSWORD: cityatlas_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - cityatlas_pg_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/cityatlas
+      DB_USERNAME: cityatlas
+      DB_PASSWORD: cityatlas_dev
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080/api
+    env_file:
+      - .env
+    depends_on:
+      - backend
+
+volumes:
+  cityatlas_pg_data:

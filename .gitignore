@@ -32,6 +32,12 @@ yarn-error.log*
 
 # backend secrets
 backend/src/main/resources/application-secrets.properties
+application-secrets.properties
+**/application-secrets.properties
+
+# FIXED: Ensure generated backend artifacts and local secrets are never committed
+target/
+backend/target/
 
 # vercel
 .vercel

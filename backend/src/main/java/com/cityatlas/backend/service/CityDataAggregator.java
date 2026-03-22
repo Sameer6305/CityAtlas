@@ -17,6 +17,7 @@ import com.cityatlas.backend.dto.response.AnalyticsResponse;
 import com.cityatlas.backend.dto.response.AnalyticsResponse.PopulationDataPoint;
 import com.cityatlas.backend.dto.response.CityResponse;
 import com.cityatlas.backend.dto.response.WeatherDTO;
+import com.cityatlas.backend.exception.ResourceNotFoundException;
 import com.cityatlas.backend.service.external.AirQualityService;
 import com.cityatlas.backend.service.external.GeoDBCityService;
 import com.cityatlas.backend.service.external.GeoDBCityService.CityInfo;
@@ -26,7 +27,6 @@ import com.cityatlas.backend.service.external.WeatherService;
 import com.cityatlas.backend.service.external.WorldBankService;
 import com.cityatlas.backend.service.external.WorldBankService.YearValue;
 
-import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -111,7 +111,8 @@ public class CityDataAggregator {
             longitude = cityInfo.longitude();
             log.info("GeoDB data found for {}: pop={}, country={}", cityName, population, countryCode);
         } else {
-            log.warn("No GeoDB data for {}. Using slug-derived name only.", cityName);
+            // FIXED: Unknown city slug now returns a clear 404 instead of ambiguous fallback data.
+            throw new ResourceNotFoundException("City", "slug", slug);
         }
 
         // ── Step 2: Fire ALL remaining calls in PARALLEL ────────────────────────

@@ -10,6 +10,58 @@
 
 ---
 
+## Project Status
+
+| Feature | Status |
+|--------|--------|
+| City pages and API | ✅ Working |
+| External integrations | ✅ Working (API keys required) |
+| AI summary | ✅ Working |
+| Analytics pipeline | 🔶 Demo mode |
+| Authentication | 🔶 Demo JWT (see setup) |
+| Kafka event stream | 🔶 Optional/manual |
+| Production deployment | 🔶 Docker available |
+| CI/CD | ✅ GitHub Actions |
+
+<!-- FIXED: Added explicit feature status to avoid optimistic/stale expectations. -->
+
+## Environment Setup
+
+1. Copy `.env.example` to `.env` (repo root).
+2. Fill all required secrets and runtime variables.
+3. Start backend from `backend/` with environment variables loaded.
+4. Start frontend from repo root.
+
+Required environment variables:
+
+- `DB_URL`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `OPENWEATHER_API_KEY`
+- `OPENAQ_API_KEY`
+- `SPOTIFY_CLIENT_ID`
+- `SPOTIFY_CLIENT_SECRET`
+- `UNSPLASH_ACCESS_KEY`
+- `JWT_SECRET`
+- `JWT_EXPIRATION_MS`
+- `CITYATLAS_DEMO_EMAIL`
+- `CITYATLAS_DEMO_PASSWORD`
+- `CITYATLAS_CORS_ALLOWED_ORIGINS`
+- `NEXT_PUBLIC_API_URL`
+- `NEXT_PUBLIC_APP_URL`
+
+Clean database reset (Docker):
+
+```bash
+docker compose down -v
+docker compose up -d db
+```
+
+## Demo Credentials
+
+- Email: `demo@cityatlas.com`
+- Password: `demo123`
+
 ## 📋 Table of Contents
 
 - [Executive Summary](#executive-summary)

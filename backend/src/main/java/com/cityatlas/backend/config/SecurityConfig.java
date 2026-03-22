@@ -6,13 +6,17 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import com.cityatlas.backend.security.JwtAuthFilter;
 
 /**
  * Security Configuration for CityAtlas Backend
@@ -37,6 +41,17 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    // AUTH: JWT-based, demo credentials in AuthController
+    // FIXED: Route protection now requires JWT for all non-auth, non-health API paths.
+
+    private final JwtAuthFilter jwtAuthFilter;
+    private final RateLimitFilter rateLimitFilter;
+
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter, RateLimitFilter rateLimitFilter) {
+        this.jwtAuthFilter = jwtAuthFilter;
+        this.rateLimitFilter = rateLimitFilter;
+    }
+
     @Value("${cityatlas.cors.allowed-origins:http://localhost:3000,http://localhost:3001}")
     private String corsAllowedOrigins;
 
@@ -56,6 +71,8 @@ public class SecurityConfig {
             // CORS Configuration
             // ============================================
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .httpBasic(AbstractHttpConfigurer::disable)
+            .formLogin(AbstractHttpConfigurer::disable)
             
             // ============================================
             // CSRF Protection - DISABLED for REST API
@@ -63,28 +80,18 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             
             // ============================================
-            // Authorization Rules - DEVELOPMENT ONLY
+            // Authorization Rules
             // ============================================
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints (no auth required)
-                // Note: context-path (/api) is stripped by the servlet container,
-                // so matchers here use servlet-relative paths (no /api prefix).
                 .requestMatchers(
-                    "/public/**",
+                    "/auth/**",
                     "/health/**",
-                    "/actuator/**",
+                    "/actuator/health/**",
                     "/swagger-ui/**",
                     "/v3/api-docs/**"
                 ).permitAll()
-                
-                // ⚠️ DEVELOPMENT: Allow all other requests without authentication
-                // TODO: Replace with authenticated() and add JWT filter
-                .anyRequest().permitAll()
-                
-                // TODO: Production configuration example:
-                // .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                // .requestMatchers("/api/cities/**").authenticated()
-                // .anyRequest().authenticated()
+
+                .anyRequest().authenticated()
             )
             
             // ============================================
@@ -93,20 +100,12 @@ public class SecurityConfig {
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
-            
-            // ============================================
-            // JWT Filter - TO BE ADDED
-            // ============================================
-            // TODO: Add JWT authentication filter before UsernamePasswordAuthenticationFilter
-            // .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
-            
-            // ============================================
-            // Exception Handling - TO BE CONFIGURED
-            // ============================================
-            // TODO: Add custom authentication entry point
-            // .exceptionHandling(ex -> ex
-            //     .authenticationEntryPoint(jwtAuthenticationEntryPoint())
-            // )
+            .exceptionHandling(ex -> ex
+                // FIXED: Return 401 (not 403) when token is missing/invalid on protected routes.
+                .authenticationEntryPoint((request, response, authException) -> response.sendError(401))
+            )
+            .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
         ;
         
         return http.build();
@@ -160,32 +159,4 @@ public class SecurityConfig {
         return source;
     }
     
-    // ============================================
-    // JWT Components - TO BE IMPLEMENTED
-    // ============================================
-    
-    /*
-     * TODO: Add these beans when implementing JWT authentication
-     * 
-     * @Bean
-     * public JwtAuthenticationFilter jwtAuthenticationFilter() {
-     *     return new JwtAuthenticationFilter();
-     * }
-     * 
-     * @Bean
-     * public AuthenticationManager authenticationManager(
-     *         AuthenticationConfiguration authConfig) throws Exception {
-     *     return authConfig.getAuthenticationManager();
-     * }
-     * 
-     * @Bean
-     * public PasswordEncoder passwordEncoder() {
-     *     return new BCryptPasswordEncoder();
-     * }
-     * 
-     * @Bean
-     * public JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint() {
-     *     return new JwtAuthenticationEntryPoint();
-     * }
-     */
 }

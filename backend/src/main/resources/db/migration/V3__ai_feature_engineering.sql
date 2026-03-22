@@ -23,8 +23,8 @@ CREATE TABLE IF NOT EXISTS city_computed_features (
     -- DIMENSION RELATIONSHIP
     -- ═══════════════════════════════════════════════════════════════════════════
     
-    -- Reference to city dimension table (nullable for flexibility during development)
-    city_key BIGINT REFERENCES dim_city(city_key),
+    -- FIXED: Reference dim_city primary key to ensure clean Flyway bootstrap.
+    city_key BIGINT REFERENCES dim_city(id),
     
     -- Date when features were computed (forms unique key with city_key)
     computation_date DATE NOT NULL,
