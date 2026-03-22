@@ -119,7 +119,7 @@ public class AiSummaryController {
         //   - Calculate relative popularity compared to other cities
         //   - Use time-weighted engagement metrics
         // For now: Default to moderate popularity (50/100) if no data available
-        Integer popularityScore = calculatePopularityScore(city);
+        Integer popularityScore = calculatePopularityScore();
         log.debug("Calculated popularity score for {}: {}", citySlug, popularityScore);
         
         // Step 4: Generate AI summary
@@ -158,7 +158,7 @@ public class AiSummaryController {
      * @param city The city entity (could use analytics data in future)
      * @return Popularity score 0-100 (currently defaults to 50)
      */
-    private Integer calculatePopularityScore(City city) {
+    private Integer calculatePopularityScore() {
         // TODO: Implement real popularity calculation from analytics_events table
         // For now, return moderate popularity for all cities
         // This prevents the AI summary from making assumptions about popularity

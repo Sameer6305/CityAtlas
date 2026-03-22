@@ -35,6 +35,7 @@ import com.cityatlas.backend.entity.City;
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("AI Inference Pipeline Tests")
+@SuppressWarnings("unused")
 class AiInferenceServiceTest {
     
     @Mock
@@ -53,6 +54,7 @@ class AiInferenceServiceTest {
     private AiQualityGuard qualityGuard;
 
     @Mock
+    @SuppressWarnings("unused")
     private AiFallbackService fallbackService;
     
     @InjectMocks
@@ -61,6 +63,7 @@ class AiInferenceServiceTest {
     private City testCity;
     
     @BeforeEach
+    @SuppressWarnings("unused")
     void setUp() {
         testCity = new City();
         testCity.setSlug("test-city");

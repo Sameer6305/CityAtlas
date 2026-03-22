@@ -226,8 +226,10 @@ public class CityDataAggregator {
         long elapsed = System.currentTimeMillis() - startMs;
         log.info("City response built for {} in {}ms (parallel)", cityName, elapsed);
 
+        Long cityId = resolveCityId(cityInfo, slug);
+
         return CityResponse.builder()
-            .id(cityInfo != null ? cityInfo.id() : (long) slug.hashCode())
+            .id(cityId)
             .slug(slug)
             .name(cityName)
             .state(state)
@@ -363,6 +365,13 @@ public class CityDataAggregator {
             return String.format("%,d", pop);
         }
         return String.valueOf(pop);
+    }
+
+    private Long resolveCityId(GeoDBCityService.CityInfo cityInfo, String slug) {
+        if (cityInfo != null && cityInfo.id() != null) {
+            return cityInfo.id();
+        }
+        return (long) slug.hashCode();
     }
 
     /**

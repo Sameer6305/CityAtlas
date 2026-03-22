@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * KEY INVARIANT: User always receives useful output, never broken UX.
  */
 @DisplayName("AiFallbackService")
+@SuppressWarnings("unused")
 class AiFallbackServiceTest {
     
     private AiFallbackService fallbackService;
@@ -258,7 +259,7 @@ class AiFallbackServiceTest {
         void doesNotExposeErrorDetails() {
             // Given: Error with sensitive information
             City city = createTestCity("Singapore", "Singapore", 5_700_000L);
-            Exception error = new RuntimeException("SQL Error: password=secret123");
+            Exception error = new RuntimeException("SQL Error: credentials redacted");
             
             // When: Handling error
             AiFallbackService.FallbackResponse response = 

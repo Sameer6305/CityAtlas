@@ -59,8 +59,8 @@ docker compose up -d db
 
 ## Demo Credentials
 
-- Email: `demo@example.com`
-- Password: `hidden-for-security`
+- Email: `YOUR_DEMO_LOGIN_EMAIL`
+- Password: `YOUR_DEMO_LOGIN_PASSWORD`
 
 ## 📋 Table of Contents
 

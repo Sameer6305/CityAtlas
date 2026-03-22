@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Tests for AiQualityGuard - validates inference blocking logic.
  */
+@SuppressWarnings("unused")
 class AiQualityGuardTest {
 
     private AiQualityGuard guard;

@@ -68,6 +68,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Service
 @Slf4j
+@SuppressWarnings("all")
 public class DataCleaningService {
     
     // ═══════════════════════════════════════════════════════════════════════════
@@ -105,7 +106,6 @@ public class DataCleaningService {
      * Quality score values for different data states.
      */
     private static final int QUALITY_SCORE_PERFECT = 100;
-    private static final int QUALITY_SCORE_GOOD = 75;
     private static final int QUALITY_SCORE_STALE = 50;
     private static final int QUALITY_SCORE_OUTLIER = 25;
     
@@ -419,11 +419,20 @@ public class DataCleaningService {
      * Result of a cleaning operation.
      * Contains clean records, rejected records, and flagged outliers.
      */
-    public record CleaningResult<T>(
-        List<T> cleanRecords,
-        List<RejectedRecord<T>> rejectedRecords,
-        Set<Long> outlierIds
-    ) {
+    public static final class CleaningResult<T> {
+        private final List<T> cleanRecords;
+        private final List<RejectedRecord<T>> rejectedRecords;
+        private final Set<Long> outlierIds;
+
+        public CleaningResult(List<T> cleanRecords, List<RejectedRecord<T>> rejectedRecords, Set<Long> outlierIds) {
+            this.cleanRecords = cleanRecords;
+            this.rejectedRecords = rejectedRecords;
+            this.outlierIds = outlierIds;
+        }
+
+        public List<T> cleanRecords() { return cleanRecords; }
+        public List<RejectedRecord<T>> rejectedRecords() { return rejectedRecords; }
+        public Set<Long> outlierIds() { return outlierIds; }
         public int cleanCount() { return cleanRecords.size(); }
         public int rejectedCount() { return rejectedRecords.size(); }
         public int outlierCount() { return outlierIds.size(); }

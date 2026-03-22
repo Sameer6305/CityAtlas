@@ -51,6 +51,7 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@SuppressWarnings("unused")
 public class AiCitySummaryService {
     
     // Inject the feature computer for structured score calculation

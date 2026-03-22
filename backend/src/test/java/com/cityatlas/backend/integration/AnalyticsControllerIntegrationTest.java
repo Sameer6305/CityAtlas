@@ -23,9 +23,10 @@ import com.cityatlas.backend.service.CityDataAggregator;
 @AutoConfigureMockMvc
 @TestPropertySource(properties = {
         "cityatlas.jwt.secret=test-secret-key-with-at-least-thirty-two-characters",
-        "cityatlas.demo.email=demo@example.com",
-        "cityatlas.demo.password=hidden-for-security"
+        "cityatlas.demo.email=TEST_DEMO_LOGIN_EMAIL",
+        "cityatlas.demo.password=TEST_DEMO_LOGIN_PASSWORD"
 })
+@SuppressWarnings("removal")
 class AnalyticsControllerIntegrationTest {
 
     @Autowired
@@ -35,7 +36,7 @@ class AnalyticsControllerIntegrationTest {
     private CityDataAggregator cityDataAggregator;
 
     @Test
-        @WithMockUser(username = "demo@example.com")
+        @WithMockUser(username = "test-user")
     void analyticsEndpointReturnsGracefulPayload() throws Exception {
         AnalyticsResponse response = AnalyticsResponse.builder()
                 .citySlug("new-york")

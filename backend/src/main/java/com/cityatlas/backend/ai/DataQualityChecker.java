@@ -10,6 +10,7 @@ import java.util.List;
  * Detects missing fields, unrealistic values, and insufficient data.
  */
 @Service
+@SuppressWarnings("all")
 public class DataQualityChecker {
 
     private static final double MIN_VALID_SCORE = 0.0;
@@ -167,14 +168,37 @@ public class DataQualityChecker {
     /**
      * Result of data quality validation.
      */
-    public record DataQualityResult(
-        boolean isSufficient,      // Can we safely run inference?
-        double completeness,        // 0-100% completeness score
-        List<String> issues,        // Critical issues (block inference)
-        List<String> warnings       // Non-critical warnings
-    ) {
+    public static final class DataQualityResult {
+        private final boolean sufficient;
+        private final double completeness;
+        private final List<String> issues;
+        private final List<String> warnings;
+
+        public DataQualityResult(boolean sufficient, double completeness, List<String> issues, List<String> warnings) {
+            this.sufficient = sufficient;
+            this.completeness = completeness;
+            this.issues = issues;
+            this.warnings = warnings;
+        }
+
+        public boolean isSufficient() {
+            return sufficient;
+        }
+
+        public double completeness() {
+            return completeness;
+        }
+
+        public List<String> issues() {
+            return issues;
+        }
+
+        public List<String> warnings() {
+            return warnings;
+        }
+
         public String getSummary() {
-            if (isSufficient) {
+            if (sufficient) {
                 return String.format("Data quality: %.1f%% complete, %d warnings", 
                     completeness, warnings.size());
             } else {

@@ -57,6 +57,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Service
 @Slf4j
+@SuppressWarnings("unused")
 public class CityFeatureComputer {
     
     // ==========================================================================

@@ -157,8 +157,7 @@ public class CityImageService {
                 })
                 .retryWhen(Retry.backoff(2, Duration.ofSeconds(1))
                         .filter(throwable -> {
-                            if (throwable instanceof ExternalApiException) {
-                                ExternalApiException apiEx = (ExternalApiException) throwable;
+                            if (throwable instanceof ExternalApiException apiEx) {
                                 return apiEx.isRetryable();
                             }
                             return false;
@@ -237,8 +236,7 @@ public class CityImageService {
                 })
                 .retryWhen(Retry.backoff(2, Duration.ofSeconds(1))
                         .filter(throwable -> {
-                            if (throwable instanceof ExternalApiException) {
-                                ExternalApiException apiEx = (ExternalApiException) throwable;
+                            if (throwable instanceof ExternalApiException apiEx) {
                                 return apiEx.isRetryable();
                             }
                             return false;

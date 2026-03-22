@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+
 import { fetchCityData } from '@/lib/api';
 
 describe('api.fetchCityData', () => {
@@ -43,10 +45,10 @@ describe('api.fetchCityData', () => {
       pm25: 9,
     };
 
-    global.fetch = jest.fn().mockResolvedValue({
+    global.fetch = (jest.fn().mockResolvedValue({
       ok: true,
       json: async () => payload,
-    } as Response);
+    } as Response) as unknown as typeof fetch);
 
     const result = await fetchCityData('new-york');
     // FIXED: Assert API client returns parsed city data shape on success.
@@ -55,7 +57,7 @@ describe('api.fetchCityData', () => {
   });
 
   test('handles non-2xx responses gracefully', async () => {
-    global.fetch = jest.fn().mockResolvedValue({ ok: false } as Response);
+    global.fetch = (jest.fn().mockResolvedValue({ ok: false } as Response) as unknown as typeof fetch);
 
     const result = await fetchCityData('missing-city');
     expect(result).toBeNull();

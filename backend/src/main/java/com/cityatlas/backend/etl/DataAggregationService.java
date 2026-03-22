@@ -1,6 +1,5 @@
 package com.cityatlas.backend.etl;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -9,6 +8,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import com.cityatlas.backend.entity.AnalyticsEvent;
+import com.cityatlas.backend.entity.City;
 import com.cityatlas.backend.entity.Metrics;
 import com.cityatlas.backend.entity.analytics.DimCity;
 import com.cityatlas.backend.entity.analytics.FactCityMetrics;
@@ -75,6 +75,7 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @Slf4j
 @RequiredArgsConstructor
+@SuppressWarnings("all")
 public class DataAggregationService {
     
     // ═══════════════════════════════════════════════════════════════════════════
@@ -125,7 +126,6 @@ public class DataAggregationService {
                  normalizedMetrics.size());
         
         List<FactCityMetrics> results = new ArrayList<>();
-        LocalDate today = LocalDate.now();
         
         // ─────────────────────────────────────────────────────────────────────
         // STEP 1: Group by grain (city + type + date)
@@ -136,7 +136,7 @@ public class DataAggregationService {
             .collect(Collectors.groupingBy(nm -> {
                 Metrics m = nm.originalMetric();
                 return String.format("%d_%s_%s",
-                    m.getCity().getId(),
+                    safeCityId(m.getCity()),
                     m.getMetricType().name(),
                     m.getRecordedAt().toLocalDate()
                 );
@@ -158,7 +158,7 @@ public class DataAggregationService {
                 .orElseThrow();
             
             Metrics source = latest.originalMetric();
-            Long cityId = source.getCity().getId();
+            Long cityId = safeCityId(source.getCity());
             DimCity dimCity = dimCityLookup.get(cityId);
             
             if (dimCity == null) {
@@ -242,7 +242,7 @@ public class DataAggregationService {
         
         Map<String, List<AnalyticsEvent>> byGrain = events.stream()
             .collect(Collectors.groupingBy(e -> {
-                Long cityId = e.getCity() != null ? e.getCity().getId() : 0L;
+                Long cityId = safeCityId(e.getCity());
                 return String.format("%d_%s_%s",
                     cityId,
                     e.getEventType().name(),
@@ -261,7 +261,7 @@ public class DataAggregationService {
             AnalyticsEvent sample = grainEvents.get(0);
             
             // Resolve dimension reference
-            Long cityId = sample.getCity() != null ? sample.getCity().getId() : null;
+            Long cityId = sample.getCity() != null ? safeCityId(sample.getCity()) : null;
             DimCity dimCity = cityId != null ? dimCityLookup.get(cityId) : null;
             
             // ─────────────────────────────────────────────────────────────────
@@ -373,24 +373,33 @@ public class DataAggregationService {
             }
             
             // Extract numeric value after colon
-            StringBuilder numBuilder = new StringBuilder();
+            long value = 0L;
+            boolean foundDigit = false;
             for (int i = colonIdx + 1; i < metadata.length(); i++) {
                 char c = metadata.charAt(i);
                 if (Character.isDigit(c)) {
-                    numBuilder.append(c);
-                } else if (numBuilder.length() > 0) {
+                    value = (value * 10L) + (c - '0');
+                    foundDigit = true;
+                } else if (foundDigit) {
                     break; // End of number
                 }
             }
-            
-            if (numBuilder.length() > 0) {
-                return Long.parseLong(numBuilder.toString());
+
+            if (foundDigit) {
+                return value;
             }
         } catch (NumberFormatException e) {
             log.debug("[ETL-AGG] Could not parse duration from metadata: {}", metadata);
         }
         
         return null;
+    }
+
+    private Long safeCityId(City city) {
+        if (city == null || city.getId() == null) {
+            return 0L;
+        }
+        return city.getId();
     }
     
     // ═══════════════════════════════════════════════════════════════════════════

@@ -113,16 +113,13 @@ public class WeatherService {
                             response.statusCode(), errorBody);
                         
                         // Create meaningful error message based on status code
-                        String errorMessage;
-                        if (response.statusCode().value() == 404) {
-                            errorMessage = "City not found: " + cityName;
-                        } else if (response.statusCode().value() == 401) {
-                            errorMessage = "Invalid API key";
-                        } else if (response.statusCode().value() == 429) {
-                            errorMessage = "Rate limit exceeded";
-                        } else {
-                            errorMessage = "Failed to fetch weather: " + errorBody;
-                        }
+                        int statusCode = response.statusCode().value();
+                        String errorMessage = switch (statusCode) {
+                            case 404 -> "City not found: " + cityName;
+                            case 401 -> "Invalid API key";
+                            case 429 -> "Rate limit exceeded";
+                            default -> "Failed to fetch weather: " + errorBody;
+                        };
                         
                         return Mono.error(new ExternalApiException(
                             "OpenWeatherMap",
@@ -142,8 +139,7 @@ public class WeatherService {
             )
             .filter(throwable -> {
                 // Only retry if it's a retryable error
-                if (throwable instanceof ExternalApiException) {
-                    ExternalApiException apiEx = (ExternalApiException) throwable;
+                if (throwable instanceof ExternalApiException apiEx) {
                     boolean shouldRetry = apiEx.isRetryable();
                     log.debug("ExternalApiException: retryable={}", shouldRetry);
                     return shouldRetry;

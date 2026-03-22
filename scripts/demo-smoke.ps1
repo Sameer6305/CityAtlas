@@ -18,8 +18,12 @@ function Assert-StatusCode {
 
 Write-Output "[SMOKE] Starting CityAtlas demo smoke flow"
 
-$demoEmail = if ($env:CITYATLAS_DEMO_EMAIL) { $env:CITYATLAS_DEMO_EMAIL } else { "demo@example.com" }
-$demoPassword = if ($env:CITYATLAS_DEMO_PASSWORD) { $env:CITYATLAS_DEMO_PASSWORD } else { "hidden-for-security" }
+$demoEmail = $env:CITYATLAS_DEMO_EMAIL
+$demoPassword = $env:CITYATLAS_DEMO_PASSWORD
+
+if ([string]::IsNullOrWhiteSpace($demoEmail) -or [string]::IsNullOrWhiteSpace($demoPassword)) {
+    throw "[Auth login] Missing CITYATLAS_DEMO_EMAIL or CITYATLAS_DEMO_PASSWORD in environment"
+}
 
 # 1) Frontend health
 $frontendResponse = Invoke-WebRequest -UseBasicParsing -Uri $FrontendBase -Method Get
@@ -33,9 +37,7 @@ Write-Output "[PASS] Backend health endpoint is UP"
 
 # 3) Login
 $loginCandidates = @(
-    @{ email = $demoEmail; password = $demoPassword },
-    @{ email = "demo@cityatlas.com"; password = "demo123" },
-    @{ email = "demo@example.com"; password = "hidden-for-security" }
+    @{ email = $demoEmail; password = $demoPassword }
 )
 
 $loginResponse = $null

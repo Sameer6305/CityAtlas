@@ -10,6 +10,7 @@ import java.util.List;
  * Enforces quality gates before allowing inference to proceed.
  */
 @Service
+@SuppressWarnings("all")
 public class AiQualityGuard {
 
     private final DataQualityChecker dataQualityChecker;
@@ -161,13 +162,43 @@ public class AiQualityGuard {
     /**
      * Result of quality guard validation.
      */
-    public record GuardResult(
-        boolean shouldProceed,          // Can inference proceed?
-        double dataCompleteness,        // 0-100%
-        List<String> blockers,          // Critical issues blocking inference
-        List<String> recommendations,   // Non-critical warnings
-        String guidance                 // Actionable guidance message
-    ) {
+    public static final class GuardResult {
+        private final boolean shouldProceed;
+        private final double dataCompleteness;
+        private final List<String> blockers;
+        private final List<String> recommendations;
+        private final String guidance;
+
+        public GuardResult(boolean shouldProceed, double dataCompleteness,
+                           List<String> blockers, List<String> recommendations,
+                           String guidance) {
+            this.shouldProceed = shouldProceed;
+            this.dataCompleteness = dataCompleteness;
+            this.blockers = blockers;
+            this.recommendations = recommendations;
+            this.guidance = guidance;
+        }
+
+        public boolean shouldProceed() {
+            return shouldProceed;
+        }
+
+        public double dataCompleteness() {
+            return dataCompleteness;
+        }
+
+        public List<String> blockers() {
+            return blockers;
+        }
+
+        public List<String> recommendations() {
+            return recommendations;
+        }
+
+        public String guidance() {
+            return guidance;
+        }
+
         public boolean hasBlockers() {
             return !blockers.isEmpty();
         }

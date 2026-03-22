@@ -1,3 +1,6 @@
+/// <reference types="jest" />
+
+import { beforeEach, describe, expect, test } from '@jest/globals';
 import { useAppStore } from '@/store/useAppStore';
 
 describe('useAppStore', () => {

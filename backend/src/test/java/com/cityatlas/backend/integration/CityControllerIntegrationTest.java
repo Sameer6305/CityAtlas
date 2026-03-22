@@ -25,9 +25,10 @@ import com.cityatlas.backend.service.CityDataAggregator;
 @AutoConfigureMockMvc
 @TestPropertySource(properties = {
         "cityatlas.jwt.secret=test-secret-key-with-at-least-thirty-two-characters",
-        "cityatlas.demo.email=demo@example.com",
-        "cityatlas.demo.password=hidden-for-security"
+        "cityatlas.demo.email=TEST_DEMO_LOGIN_EMAIL",
+        "cityatlas.demo.password=TEST_DEMO_LOGIN_PASSWORD"
 })
+@SuppressWarnings("removal")
 class CityControllerIntegrationTest {
 
     @Autowired
@@ -44,7 +45,7 @@ class CityControllerIntegrationTest {
     }
 
     @Test
-        @WithMockUser(username = "demo@example.com")
+        @WithMockUser(username = "test-user")
     void getCityBySlugReturnsCityPayload() throws Exception {
         CityResponse city = CityResponse.builder()
                 .id(1L)
@@ -64,7 +65,7 @@ class CityControllerIntegrationTest {
     }
 
     @Test
-        @WithMockUser(username = "demo@example.com")
+        @WithMockUser(username = "test-user")
     void getCityBySlugWithInvalidIdReturns404() throws Exception {
         when(cityDataAggregator.buildCityResponse(anyString()))
                 .thenThrow(new ResourceNotFoundException("City", "slug", "invalid-city"));

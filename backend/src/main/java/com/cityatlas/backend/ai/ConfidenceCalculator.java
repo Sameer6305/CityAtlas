@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
  * Based on data quality, score patterns, and inference characteristics.
  */
 @Service
+@SuppressWarnings("all")
 public class ConfidenceCalculator {
 
     private static final double HIGH_CONFIDENCE_THRESHOLD = 80.0;
@@ -107,14 +108,10 @@ public class ConfidenceCalculator {
      */
     private double calculateScoreVariance(CityFeatureInput input) {
         double[] scores = {
-            input.getEconomyFeatures() != null && input.getEconomyFeatures().getEconomyScore() != null ? 
-                input.getEconomyFeatures().getEconomyScore() : 50.0,
-            input.getLivabilityFeatures() != null && input.getLivabilityFeatures().getLivabilityScore() != null ? 
-                input.getLivabilityFeatures().getLivabilityScore() : 50.0,
-            input.getSustainabilityFeatures() != null && input.getSustainabilityFeatures().getSustainabilityScore() != null ? 
-                input.getSustainabilityFeatures().getSustainabilityScore() : 50.0,
-            input.getGrowthFeatures() != null && input.getGrowthFeatures().getGrowthScore() != null ? 
-                input.getGrowthFeatures().getGrowthScore() : 50.0
+            safeScore(input.getEconomyFeatures() != null ? input.getEconomyFeatures().getEconomyScore() : null),
+            safeScore(input.getLivabilityFeatures() != null ? input.getLivabilityFeatures().getLivabilityScore() : null),
+            safeScore(input.getSustainabilityFeatures() != null ? input.getSustainabilityFeatures().getSustainabilityScore() : null),
+            safeScore(input.getGrowthFeatures() != null ? input.getGrowthFeatures().getGrowthScore() : null)
         };
         
         double mean = 0;
@@ -127,6 +124,10 @@ public class ConfidenceCalculator {
         }
         
         return Math.sqrt(variance / scores.length); // Standard deviation
+    }
+
+    private double safeScore(Double value) {
+        return value != null ? value : 50.0;
     }
     
     /**

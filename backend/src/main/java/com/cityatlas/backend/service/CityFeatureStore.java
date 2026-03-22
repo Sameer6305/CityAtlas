@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -15,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.cityatlas.backend.entity.City;
 import com.cityatlas.backend.entity.analytics.CityComputedFeatures;
-import com.cityatlas.backend.entity.analytics.DimCity;
 import com.cityatlas.backend.repository.CityComputedFeaturesRepository;
 import com.cityatlas.backend.repository.CityRepository;
 import com.cityatlas.backend.service.CityFeatureComputer.CityFeatures;
@@ -201,7 +199,7 @@ public class CityFeatureStore {
         
         // For now, we'll create features without DimCity linkage
         // In production, this would link to the star schema dimension table
-        CityComputedFeatures entity = CityComputedFeatures.builder()
+        CityComputedFeatures.builder()
                 .computationDate(today)
                 // Scores
                 .economyScore(safeScore(features.getEconomyScore()))
