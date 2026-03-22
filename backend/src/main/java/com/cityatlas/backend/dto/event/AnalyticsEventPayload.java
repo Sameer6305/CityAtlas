@@ -119,6 +119,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL) // Exclude null fields from JSON
+@SuppressWarnings("unused")
 public class AnalyticsEventPayload {
     
     /**

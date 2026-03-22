@@ -6,12 +6,12 @@ import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.cityatlas.backend.config.KafkaTopics;
 import com.cityatlas.backend.dto.event.AnalyticsEventPayload;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -86,10 +86,10 @@ import lombok.extern.slf4j.Slf4j;
  * @see KafkaEventLogger
  */
 @Service
-@RequiredArgsConstructor
-@Slf4j
 @ConditionalOnProperty(name = "kafka.enabled", havingValue = "true", matchIfMissing = false)
 public class AnalyticsEventConsumer {
+
+    private static final Logger log = LoggerFactory.getLogger(AnalyticsEventConsumer.class);
     
     /**
      * Service layer that handles the business logic for analytics events
@@ -102,6 +102,12 @@ public class AnalyticsEventConsumer {
      * Logs all events in a format suitable for log aggregators and demos
      */
     private final KafkaEventLogger kafkaEventLogger;
+
+    public AnalyticsEventConsumer(AnalyticsEventService analyticsEventService,
+                                  KafkaEventLogger kafkaEventLogger) {
+        this.analyticsEventService = analyticsEventService;
+        this.kafkaEventLogger = kafkaEventLogger;
+    }
     
     /**
      * ═══════════════════════════════════════════════════════════════════════════

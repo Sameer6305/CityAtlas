@@ -10,12 +10,12 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.cityatlas.backend.dto.event.AnalyticsEventPayload;
 import com.cityatlas.backend.entity.analytics.FactUserEventsDaily;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * ============================================================================
@@ -106,16 +106,13 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Component
 @ConditionalOnProperty(name = "kafka.enabled", havingValue = "true")
-@Slf4j
-@RequiredArgsConstructor
 public class EtlKafkaListener {
+
+    private static final Logger log = LoggerFactory.getLogger(EtlKafkaListener.class);
     
     // ═══════════════════════════════════════════════════════════════════════════
     // DEPENDENCIES
     // ═══════════════════════════════════════════════════════════════════════════
-    
-    private final DataCleaningService cleaningService;
-    private final DataAggregationService aggregationService;
     
     // ═══════════════════════════════════════════════════════════════════════════
     // MICRO-BATCH CONFIGURATION
@@ -368,16 +365,9 @@ public class EtlKafkaListener {
      * Validate that payload has required fields.
      */
     private boolean isValidPayload(AnalyticsEventPayload payload) {
-        if (payload == null) {
-            return false;
-        }
-        if (payload.getEventType() == null) {
-            return false;
-        }
-        if (payload.getTimestamp() == null) {
-            return false;
-        }
-        return true;
+        return payload != null
+            && payload.getEventType() != null
+            && payload.getTimestamp() != null;
     }
     
     /**
@@ -412,7 +402,6 @@ public class EtlKafkaListener {
      * Thread-safe for concurrent updates within a grain.
      */
     private static class EventAccumulator {
-        private final String citySlug;
         private final String eventType;
         private final java.time.LocalDate eventDate;
         
@@ -428,7 +417,6 @@ public class EtlKafkaListener {
         private final AtomicLong engagedCount = new AtomicLong(0);
         
         public EventAccumulator(AnalyticsEventPayload firstPayload) {
-            this.citySlug = firstPayload.getCitySlug();
             this.eventType = firstPayload.getEventType(); // eventType is already a String
             this.eventDate = firstPayload.getTimestamp().toLocalDate();
         }

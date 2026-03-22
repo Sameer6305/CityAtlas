@@ -6,12 +6,12 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.cityatlas.backend.config.KafkaTopics;
 import com.cityatlas.backend.dto.event.AnalyticsEventPayload;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════════
@@ -87,10 +87,10 @@ import lombok.extern.slf4j.Slf4j;
  * @see KafkaEventLogger
  */
 @Service
-@RequiredArgsConstructor
-@Slf4j
 @ConditionalOnProperty(name = "kafka.enabled", havingValue = "true", matchIfMissing = false)
 public class AnalyticsEventProducer {
+
+    private static final Logger log = LoggerFactory.getLogger(AnalyticsEventProducer.class);
     
     /**
      * KafkaTemplate for publishing events
@@ -105,6 +105,12 @@ public class AnalyticsEventProducer {
      * Structured JSON logger for Kafka pipeline observability
      */
     private final KafkaEventLogger kafkaEventLogger;
+
+    public AnalyticsEventProducer(KafkaTemplate<String, AnalyticsEventPayload> kafkaTemplate,
+                                  KafkaEventLogger kafkaEventLogger) {
+        this.kafkaTemplate = kafkaTemplate;
+        this.kafkaEventLogger = kafkaEventLogger;
+    }
     
     /**
      * ═══════════════════════════════════════════════════════════════════════════

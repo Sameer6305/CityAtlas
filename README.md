@@ -57,6 +57,11 @@ docker compose down -v
 docker compose up -d db
 ```
 
+## Demo Credentials
+
+- Email: `demo@example.com`
+- Password: `hidden-for-security`
+
 ## 📋 Table of Contents
 
 - [Executive Summary](#executive-summary)

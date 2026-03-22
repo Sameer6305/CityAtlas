@@ -5,6 +5,8 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.cityatlas.backend.dto.event.AnalyticsEventPayload;
 import com.cityatlas.backend.entity.AnalyticsEvent;
@@ -13,8 +15,6 @@ import com.cityatlas.backend.entity.EventType;
 import com.cityatlas.backend.repository.AnalyticsEventRepository;
 import com.cityatlas.backend.repository.CityRepository;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Analytics Event Service
@@ -48,12 +48,18 @@ import lombok.extern.slf4j.Slf4j;
  * @see AnalyticsEventProducer
  */
 @Service
-@RequiredArgsConstructor
-@Slf4j
 public class AnalyticsEventService {
+
+    private static final Logger log = LoggerFactory.getLogger(AnalyticsEventService.class);
     
     private final AnalyticsEventRepository analyticsEventRepository;
     private final CityRepository cityRepository;
+
+    public AnalyticsEventService(AnalyticsEventRepository analyticsEventRepository,
+                                 CityRepository cityRepository) {
+        this.analyticsEventRepository = analyticsEventRepository;
+        this.cityRepository = cityRepository;
+    }
     
     /**
      * Process CITY_SEARCHED event

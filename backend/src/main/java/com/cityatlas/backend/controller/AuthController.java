@@ -24,10 +24,10 @@ public class AuthController {
 
     private final JwtUtil jwtUtil;
 
-    @Value("${cityatlas.demo.email:demo@cityatlas.com}")
+    @Value("${cityatlas.demo.email:demo@example.com}")
     private String demoEmail;
 
-    @Value("${cityatlas.demo.password:demo123}")
+    @Value("${cityatlas.demo.password:hidden-for-security}")
     private String demoPassword;
 
     @PostMapping("/login")
