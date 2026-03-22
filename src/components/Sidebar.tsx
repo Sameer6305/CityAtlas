@@ -7,6 +7,7 @@
 
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
@@ -41,7 +42,7 @@ export function Sidebar() {
         <div className="h-16 flex items-center justify-between px-4 border-b border-surface-border/50">
           {!collapsed && (
             <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-fast">
-              <img src="/logo.png" alt="CityAtlas" className="h-10 w-auto rounded-lg" />
+              <Image src="/logo.png" alt="CityAtlas" width={160} height={56} className="h-10 w-auto rounded-lg" priority />
               <span className="text-lg font-bold text-text-primary">CityAtlas</span>
             </Link>
           )}
@@ -50,7 +51,7 @@ export function Sidebar() {
               onClick={() => setCollapsed(false)}
               className="w-full flex justify-center"
             >
-              <img src="/logo.png" alt="CityAtlas" className="h-8 w-auto rounded-lg" />
+              <Image src="/logo.png" alt="CityAtlas" width={32} height={32} className="h-8 w-8 rounded-lg" priority />
             </button>
           )}
           {!collapsed && (

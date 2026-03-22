@@ -7,6 +7,7 @@
 
 'use client';
 
+import Image from 'next/image';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/store/useAppStore';
@@ -64,7 +65,7 @@ export function TopNav({ title, subtitle, showSearch = true }: TopNavProps) {
           {/* Logo and Title Section */}
           <div className="flex-1 flex items-center gap-3">
             <button onClick={() => router.push('/')} className="hover:opacity-80 transition-fast flex items-center gap-3">
-              <img src="/logo.png" alt="CityAtlas" className="h-12 w-auto rounded-lg" />
+              <Image src="/logo.png" alt="CityAtlas" width={192} height={72} className="h-12 w-auto rounded-lg" priority />
               <span className="text-xl font-bold text-text-primary hidden sm:block">CityAtlas</span>
             </button>
             {title && (
@@ -84,6 +85,10 @@ export function TopNav({ title, subtitle, showSearch = true }: TopNavProps) {
           {/* Search Bar */}
           {showSearch && (
             <div className="flex-1 max-w-md relative">
+              <div className="mb-2 text-[11px] text-amber-300/80">
+                {/* FIXED: Explicitly label mock search so placeholder behavior is not silent. */}
+                [Demo Placeholder] Search suggestions are static.
+              </div>
               <div className="relative">
                 <input
                   type="text"
