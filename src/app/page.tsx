@@ -19,8 +19,11 @@ export default function Home() {
   useEffect(() => {
     // Check if video has already been played in this session
     const hasPlayedVideo = sessionStorage.getItem('cityatlas_video_played') === 'true';
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+    const lowBandwidth = Boolean(connection?.saveData) || ['slow-2g', '2g'].includes(connection?.effectiveType || '');
     
-    if (hasPlayedVideo) {
+    if (hasPlayedVideo || prefersReducedMotion || lowBandwidth) {
       // Skip video if already played in this session
       setShowVideo(false);
       setShowContent(true);
@@ -45,13 +48,13 @@ export default function Home() {
         }
       }, 100);
       
-      const timer1 = setTimeout(() => setShowContent(true), 6000); // Start fade at 6s
+      const timer1 = setTimeout(() => setShowContent(true), 900); // Start fade quickly for better first paint
       const timer2 = setTimeout(() => {
         setAnimationComplete(true);
         setShowVideo(false);
         // Mark that video has been played
         sessionStorage.setItem('cityatlas_video_played', 'true');
-      }, 8000); // Complete at 8s
+      }, 1500); // Complete quickly to keep the app responsive
       
       return () => {
         clearTimeout(playTimer);
@@ -86,7 +89,8 @@ export default function Home() {
           fill
           className="object-cover"
           priority
-          quality={100}
+          quality={80}
+          sizes="100vw"
         />
         
         {/* Very light gradient overlay for maximum cityscape visibility */}

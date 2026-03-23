@@ -1,4 +1,22 @@
 /** @type {import('next').NextConfig} */
+const resolveOrigin = (value) => {
+  if (!value) return null;
+
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+};
+
+const dynamicConnectSrc = [
+  "'self'",
+  'http://localhost:8080',
+  'https://localhost:8080',
+  resolveOrigin(process.env.NEXT_PUBLIC_API_URL),
+  resolveOrigin(process.env.BACKEND_API_URL),
+].filter(Boolean);
+
 const nextConfig = {
   // ============================================
   // SECURITY HEADERS
@@ -29,7 +47,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https://images.unsplash.com https://openweathermap.org",
-              "connect-src 'self' http://localhost:8080 https://localhost:8080 ${NEXT_PUBLIC_API_URL}",
+              `connect-src ${dynamicConnectSrc.join(' ')}`,
               "frame-ancestors 'none'",
             ].join('; '),
           },

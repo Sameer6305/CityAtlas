@@ -59,9 +59,9 @@ elseif ($r.code -eq 308 -or $r.code -eq 301) { Show "GeoDB" "FAIL" "(HTTP $($r.c
 else                        { Show "GeoDB" "WARN" "(HTTP $($r.code) - may be rate limited)" }
 
 # OpenWeatherMap
-$owmKey = ""
+$owmKey = $env:OPENWEATHER_API_KEY
 $secretsFile = ".\backend\src\main\resources\application-secrets.properties"
-if (Test-Path $secretsFile) {
+if ((-not $owmKey) -and (Test-Path $secretsFile)) {
     $line = Get-Content $secretsFile | Where-Object { $_ -match "^cityatlas\.external\.openweather\.api-key=" }
     if ($line) { $owmKey = $line.Split("=",2)[1].Trim() }
 }
@@ -71,7 +71,7 @@ if ($owmKey -and $owmKey -ne "your_openweather_api_key_here") {
     elseif ($r.code -eq 401) { Show "OpenWeatherMap" "FAIL" "(key invalid - check OPENWEATHER_API_KEY)" }
     else { Show "OpenWeatherMap" "WARN" "(HTTP $($r.code))" }
 } else {
-    Show "OpenWeatherMap" "WARN" "(key not configured - set openweather.api-key in application-secrets.properties)"
+    Show "OpenWeatherMap" "WARN" "(key not configured - set OPENWEATHER_API_KEY env var)"
 }
 
 # Open-Meteo Air Quality (replaces OpenAQ — no key required)
@@ -80,8 +80,8 @@ if ($r.code -eq 200) { Show "Open-Meteo AQ (no key)" "OK" }
 else { Show "Open-Meteo AQ" "WARN" "(HTTP $($r.code))" }
 
 # Unsplash
-$unsplashKey = ""
-if (Test-Path $secretsFile) {
+$unsplashKey = $env:UNSPLASH_ACCESS_KEY
+if ((-not $unsplashKey) -and (Test-Path $secretsFile)) {
     $line = Get-Content $secretsFile | Where-Object { $_ -match "^cityatlas\.external\.unsplash\.access-key=" }
     if ($line) { $unsplashKey = $line.Split("=",2)[1].Trim() }
 }
@@ -91,7 +91,7 @@ if ($unsplashKey -and $unsplashKey -ne "your_unsplash_access_key_here") {
     elseif ($r.code -eq 403) { Show "Unsplash" "FAIL" "(key invalid or rate limited)" }
     else { Show "Unsplash" "WARN" "(HTTP $($r.code))" }
 } else {
-    Show "Unsplash" "WARN" "(key not configured)"
+    Show "Unsplash" "WARN" "(key not configured - set UNSPLASH_ACCESS_KEY env var)"
 }
 
 # ---- Backend endpoints (when running) ----

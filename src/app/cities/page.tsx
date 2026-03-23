@@ -90,7 +90,8 @@ export default function CitiesPage() {
           fill
           className="object-cover"
           priority
-          quality={100}
+          quality={80}
+          sizes="100vw"
         />
         {/* Dark gradient overlay for readability */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#0a0e27]/10 via-[#0f1420]/5 to-[#000000]/15" />

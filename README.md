@@ -48,6 +48,7 @@ Required environment variables:
 - `CITYATLAS_DEMO_PASSWORD`
 - `CITYATLAS_CORS_ALLOWED_ORIGINS`
 - `NEXT_PUBLIC_API_URL`
+- `BACKEND_API_URL`
 - `NEXT_PUBLIC_APP_URL`
 
 Clean database reset (Docker):
@@ -61,6 +62,33 @@ docker compose up -d db
 
 - Email: `YOUR_DEMO_LOGIN_EMAIL`
 - Password: `YOUR_DEMO_LOGIN_PASSWORD`
+
+## Vercel Deployment (Interview Ready)
+
+This repo is split-deploy:
+- Frontend: Vercel (Next.js)
+- Backend: Spring Boot host (Render/Railway/EC2/Docker VM)
+- Database: PostgreSQL (managed or self-hosted)
+
+1. Deploy backend first and verify `https://YOUR_BACKEND_DOMAIN/api/health` returns 200.
+2. In Vercel project settings, set:
+  - `NEXT_PUBLIC_API_URL=/api/backend`
+  - `BACKEND_API_URL=https://YOUR_BACKEND_DOMAIN/api`
+  - `NEXT_PUBLIC_APP_URL=https://YOUR_VERCEL_DOMAIN`
+3. Ensure backend CORS includes your Vercel origin via:
+  - `CITYATLAS_CORS_ALLOWED_ORIGINS=https://YOUR_VERCEL_DOMAIN`
+4. Trigger a Vercel redeploy.
+5. Validate live data from deployed frontend:
+  - Open a city page and confirm weather/AQI values are populated.
+  - Run PowerShell API smoke check against backend:
+    `./check-apis.ps1 -BackendBase https://YOUR_BACKEND_DOMAIN/api`
+
+Interview-ready reliability checklist:
+- Backend health endpoint is UP.
+- OpenWeather and Unsplash keys are valid in backend environment.
+- City pages load with non-null weather and AQI values.
+- Compare page loads two cities in under 2 seconds on normal broadband.
+- Intro video does not block content on slow network or reduced-motion devices.
 
 ## 📋 Table of Contents
 

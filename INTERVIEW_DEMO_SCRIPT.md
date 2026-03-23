@@ -62,3 +62,17 @@ What to say while it runs:
 
 ## 7. Close (15 seconds)
 - "This demonstrates product thinking (usable city insights), engineering rigor (tests and validation), and production hygiene (security and config management)."
+
+## 8. Deployed Demo Mode (Vercel) (60 seconds)
+- Open your Vercel URL and quickly show:
+  - /cities page loads fast
+  - /cities/new-york shows weather + AQI populated
+  - /compare with 2 cities returns real metrics
+- Say this line:
+  - "Frontend is hosted on Vercel, backend runs separately, and requests are proxied through a Next route so browser calls stay same-origin."
+- Backup verification command (if interviewer asks proof):
+
+```powershell
+Set-Location "C:\Users\PRANAV KADAM\Desktop\CityAtlas"
+.\check-apis.ps1 -BackendBase "https://YOUR_BACKEND_DOMAIN/api"
+```

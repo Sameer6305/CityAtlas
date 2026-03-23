@@ -243,7 +243,7 @@ function ComparePageContent() {
     <div className={`relative min-h-screen overflow-hidden transition-opacity duration-[1200ms] ease-out ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
       {/* Full-screen Background */}
       <div className="fixed inset-0 -z-10">
-        <Image src="/background.png" alt="City Skyline" fill className="object-cover" priority quality={100} />
+        <Image src="/background.png" alt="City Skyline" fill className="object-cover" priority quality={80} sizes="100vw" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#0a0e27]/10 via-[#0f1420]/5 to-[#000000]/15" />
       </div>
 
