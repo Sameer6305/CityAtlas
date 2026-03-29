@@ -36,7 +36,8 @@ jobs:
         run: ./mvnw clean verify -q
         working-directory: ./backend
         env:
-          DB_URL: jdbc:postgresql://localhost:5432/cityatlas
+          SPRING_CONFIG_IMPORT: ""
+          DB_URL: jdbc:postgresql://127.0.0.1:5432/cityatlas
           DB_USERNAME: cityatlas
           DB_PASSWORD: cityatlas
           CITYATLAS_CORS_ALLOWED_ORIGINS: http://frontend.test
