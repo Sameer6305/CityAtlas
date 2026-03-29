@@ -4,6 +4,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { prefetchCityBundle } from '@/lib/api';
 import { useCityState } from '@/store/useAppStore';
 import { CITY_SECTIONS } from '@/types/city';
 
@@ -108,6 +109,9 @@ export default function CityLayout({ children, params }: CityLayoutProps) {
         lastUpdated: new Date(),
       });
     }
+
+    // Warm city + analytics payloads for faster section transitions.
+    prefetchCityBundle(citySlug);
   }, [citySlug, cityName, cityInfo.country, selectedCity, setSelectedCity]);
 
   // Animation on mount

@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.springframework.stereotype.Component;
 
@@ -105,6 +106,17 @@ public class DataQualityFallback {
      * Key format: "city_slug:METRIC_TYPE"
      */
     private final ConcurrentHashMap<String, CachedValue> valueCache = new ConcurrentHashMap<>();
+
+    // Fallback observability counters
+    private final ConcurrentHashMap<FallbackTier, AtomicLong> fallbackTierUsage = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<MetricType, AtomicLong> fallbackMetricUsage = new ConcurrentHashMap<>();
+    private final AtomicLong fallbackResolutionCount = new AtomicLong(0);
+
+    public DataQualityFallback() {
+        for (FallbackTier tier : FallbackTier.values()) {
+            fallbackTierUsage.put(tier, new AtomicLong(0));
+        }
+    }
     
     /**
      * Store a known good value in cache for future fallback.
@@ -234,10 +246,15 @@ public class DataQualityFallback {
      */
     public FallbackResult resolveFallback(String citySlug, String countryCode, MetricType type) {
         log.info("[DQ-FALLBACK] Resolving fallback for {}:{}", citySlug, type);
+        fallbackResolutionCount.incrementAndGet();
+        if (type != null) {
+            fallbackMetricUsage.computeIfAbsent(type, t -> new AtomicLong(0)).incrementAndGet();
+        }
         
         // TIER 1: Try cache first
         Optional<Double> cached = getCachedValue(citySlug, type);
         if (cached.isPresent()) {
+            fallbackTierUsage.get(FallbackTier.CACHED).incrementAndGet();
             log.info("[DQ-FALLBACK] Using cached value for {}:{} = {} (Tier 1)",
                     citySlug, type, cached.get());
             return new FallbackResult(cached.get(), FallbackTier.CACHED, 
@@ -247,6 +264,7 @@ public class DataQualityFallback {
         // TIER 2: Try regional average
         Optional<Double> regional = getRegionalAverage(countryCode, type);
         if (regional.isPresent()) {
+            fallbackTierUsage.get(FallbackTier.REGIONAL).incrementAndGet();
             log.info("[DQ-FALLBACK] Using regional average for {}:{} = {} (Tier 2)",
                     citySlug, type, regional.get());
             return new FallbackResult(regional.get(), FallbackTier.REGIONAL,
@@ -256,6 +274,7 @@ public class DataQualityFallback {
         // TIER 3: Use global default
         FallbackConfig config = DEFAULTS.get(type);
         if (config != null && config.hasDefault()) {
+            fallbackTierUsage.get(FallbackTier.GLOBAL).incrementAndGet();
             log.info("[DQ-FALLBACK] Using global default for {}:{} = {} (Tier 3)",
                     citySlug, type, config.defaultValue());
             return new FallbackResult(config.defaultValue(), FallbackTier.GLOBAL,
@@ -263,6 +282,7 @@ public class DataQualityFallback {
         }
         
         // No fallback available
+        fallbackTierUsage.get(FallbackTier.NONE).incrementAndGet();
         log.warn("[DQ-FALLBACK] No fallback available for {}:{}", citySlug, type);
         return new FallbackResult(null, FallbackTier.NONE, 
                 "No fallback available - metric is required");
@@ -335,12 +355,43 @@ public class DataQualityFallback {
             if (parts.length == 2) {
                 try {
                     MetricType type = MetricType.valueOf(parts[1]);
-                    countByType.merge(type, 1, Integer::sum);
+                    Integer current = countByType.get(type);
+                    countByType.put(type, current == null ? 1 : current + 1);
                 } catch (IllegalArgumentException ignored) {}
             }
         }
         
         return new CacheStats(valueCache.size(), countByType);
+    }
+
+    /**
+     * Returns fallback usage counts for API observability endpoints.
+     */
+    public FallbackUsageStats getFallbackUsageStats() {
+        Map<String, Long> byTier = new HashMap<>();
+        fallbackTierUsage.forEach((tier, count) -> byTier.put(tier.name(), count.get()));
+
+        Map<String, Long> byMetric = new HashMap<>();
+        fallbackMetricUsage.forEach((metric, count) -> byMetric.put(metric.name(), count.get()));
+
+        return new FallbackUsageStats(
+            fallbackResolutionCount.get(),
+            byTier,
+            byMetric
+        );
+    }
+
+    /**
+     * Basic source reliability scores aligned to fallback source quality.
+     */
+    public DataSourceReliabilityStats getDataSourceReliabilityStats() {
+        Map<String, SourceReliability> reliability = new HashMap<>();
+        reliability.put("CACHED", new SourceReliability("Tier 1 cache", 0.95, fallbackTierUsage.get(FallbackTier.CACHED).get()));
+        reliability.put("REGIONAL", new SourceReliability("Tier 2 regional averages", 0.75, fallbackTierUsage.get(FallbackTier.REGIONAL).get()));
+        reliability.put("GLOBAL", new SourceReliability("Tier 3 global defaults", 0.55, fallbackTierUsage.get(FallbackTier.GLOBAL).get()));
+        reliability.put("NONE", new SourceReliability("No fallback available", 0.00, fallbackTierUsage.get(FallbackTier.NONE).get()));
+
+        return new DataSourceReliabilityStats(fallbackResolutionCount.get(), reliability);
     }
 
     // ========================================================================
@@ -392,5 +443,22 @@ public class DataQualityFallback {
     public record CacheStats(
         int totalEntries,
         Map<MetricType, Integer> entriesByType
+    ) {}
+
+    public record FallbackUsageStats(
+        long totalFallbackResolutions,
+        Map<String, Long> usageByTier,
+        Map<String, Long> usageByMetric
+    ) {}
+
+    public record DataSourceReliabilityStats(
+        long totalFallbackResolutions,
+        Map<String, SourceReliability> sources
+    ) {}
+
+    public record SourceReliability(
+        String source,
+        double reliabilityScore,
+        long usageCount
     ) {}
 }

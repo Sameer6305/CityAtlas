@@ -141,12 +141,12 @@ export default function CityOverviewPage() {
   useEffect(() => {
     if (!citySlug) return;
     setLoading(true);
-    Promise.all([
+    Promise.allSettled([
       fetchCityData(citySlug),
       fetchAnalyticsData(citySlug),
-    ]).then(([city, anal]) => {
-      setCityData(city);
-      setAnalytics(anal);
+    ]).then(([cityResult, analyticsResult]) => {
+      setCityData(cityResult.status === 'fulfilled' ? cityResult.value : null);
+      setAnalytics(analyticsResult.status === 'fulfilled' ? analyticsResult.value : null);
       setLoading(false);
     });
   }, [citySlug]);

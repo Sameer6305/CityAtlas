@@ -23,7 +23,7 @@ public class JwtUtil {
     public JwtUtil(
             @Value("${cityatlas.jwt.secret}") String jwtSecret,
             @Value("${cityatlas.jwt.expiration-ms:86400000}") long expirationMs) {
-        this.signingKey = Keys.hmacShaKeyFor(normalizeSecret(jwtSecret));
+        this.signingKey = Keys.hmacShaKeyFor(validateAndGetSecret(jwtSecret));
         this.expirationMs = expirationMs;
     }
 
@@ -63,18 +63,20 @@ public class JwtUtil {
                 .getPayload();
     }
 
-    private byte[] normalizeSecret(String secret) {
-        String effectiveSecret = (secret == null || secret.isBlank())
-                ? "cityatlas-default-jwt-secret-change-me-1234567890"
-                : secret;
-        byte[] raw = effectiveSecret.getBytes(StandardCharsets.UTF_8);
-        if (raw.length >= 32) {
-            return raw;
+    private byte[] validateAndGetSecret(String secret) {
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException("JWT secret is required. Set JWT_SECRET environment variable.");
         }
-        byte[] padded = new byte[32];
-        for (int i = 0; i < padded.length; i++) {
-            padded[i] = raw[i % raw.length];
+
+        String trimmed = secret.trim();
+        if (trimmed.startsWith("CHANGE_ME") || trimmed.contains("YOUR_")) {
+            throw new IllegalStateException("JWT secret uses a placeholder value. Configure a strong JWT_SECRET.");
         }
-        return padded;
+
+        byte[] raw = trimmed.getBytes(StandardCharsets.UTF_8);
+        if (raw.length < 32) {
+            throw new IllegalStateException("JWT secret must be at least 32 bytes for HS256.");
+        }
+        return raw;
     }
 }

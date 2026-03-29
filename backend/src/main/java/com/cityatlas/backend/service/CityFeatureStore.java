@@ -2,10 +2,12 @@ package com.cityatlas.backend.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -68,6 +70,20 @@ public class CityFeatureStore {
     private final CityFeatureComputer featureComputer;
     private final CityComputedFeaturesRepository featuresRepository;
     private final CityRepository cityRepository;
+
+    // Simple observability counters for interview/demo APIs.
+    private final AtomicLong requestCount = new AtomicLong(0);
+    private final AtomicLong l1HitCount = new AtomicLong(0);
+    private final AtomicLong l2HitCount = new AtomicLong(0);
+    private final AtomicLong missCount = new AtomicLong(0);
+    private final AtomicLong computeAttemptCount = new AtomicLong(0);
+    private final AtomicLong computeSuccessCount = new AtomicLong(0);
+    private final AtomicLong computeFailureCount = new AtomicLong(0);
+    private volatile LocalDateTime lastComputeAt;
+    private volatile LocalDateTime lastBatchStartedAt;
+    private volatile LocalDateTime lastBatchCompletedAt;
+    private volatile Integer lastBatchSuccessCount = 0;
+    private volatile Integer lastBatchFailureCount = 0;
     
     // ═══════════════════════════════════════════════════════════════════════════
     // L1 CACHE (In-Memory)
@@ -113,10 +129,12 @@ public class CityFeatureStore {
      */
     public CityFeatures getFeatures(String citySlug, Integer currentAqi) {
         log.debug("[FEATURE-STORE] Retrieving features for city: {}", citySlug);
+        requestCount.incrementAndGet();
         
         // L1 Cache: Check in-memory cache
         CachedFeatures cached = memoryCache.get(citySlug);
         if (cached != null && !cached.isStale()) {
+            l1HitCount.incrementAndGet();
             log.debug("[FEATURE-STORE] L1 cache hit for: {}", citySlug);
             return cached.features();
         }
@@ -124,6 +142,7 @@ public class CityFeatureStore {
         // L2 Cache: Check database
         Optional<CityComputedFeatures> stored = featuresRepository.findLatestByCitySlug(citySlug);
         if (stored.isPresent() && !stored.get().isStale()) {
+            l2HitCount.incrementAndGet();
             log.debug("[FEATURE-STORE] L2 cache hit for: {}", citySlug);
             CityFeatures features = toFeatures(stored.get());
             cacheInMemory(citySlug, features, stored.get().getComputationDate());
@@ -131,6 +150,7 @@ public class CityFeatureStore {
         }
         
         // Cache miss: Compute and store
+        missCount.incrementAndGet();
         log.info("[FEATURE-STORE] Cache miss for: {}. Computing features...", citySlug);
         return computeAndStore(citySlug, currentAqi);
     }
@@ -164,11 +184,13 @@ public class CityFeatureStore {
     @Transactional
     public CityFeatures computeAndStore(String citySlug, Integer currentAqi) {
         log.info("[FEATURE-STORE] Computing and storing features for: {}", citySlug);
+        computeAttemptCount.incrementAndGet();
         
         // Load city
         Optional<City> cityOpt = cityRepository.findBySlug(citySlug);
         if (cityOpt.isEmpty()) {
             log.warn("[FEATURE-STORE] City not found: {}", citySlug);
+            computeFailureCount.incrementAndGet();
             return null;
         }
         
@@ -185,6 +207,8 @@ public class CityFeatureStore {
         
         log.info("[FEATURE-STORE] Features computed and stored for: {} (overall={})",
                 citySlug, features.getOverallScore().score());
+        lastComputeAt = LocalDateTime.now();
+        computeSuccessCount.incrementAndGet();
         
         return features;
     }
@@ -291,6 +315,7 @@ public class CityFeatureStore {
     @Transactional
     public void batchRecompute() {
         log.info("[FEATURE-STORE] Starting daily batch recomputation...");
+        lastBatchStartedAt = LocalDateTime.now();
         
         // Clear memory cache
         invalidateAll();
@@ -315,6 +340,9 @@ public class CityFeatureStore {
         
         log.info("[FEATURE-STORE] Batch recomputation complete. Success: {}, Failed: {}", 
                 success, failed);
+        lastBatchSuccessCount = success;
+        lastBatchFailureCount = failed;
+        lastBatchCompletedAt = LocalDateTime.now();
     }
     
     // ═══════════════════════════════════════════════════════════════════════════
@@ -338,6 +366,48 @@ public class CityFeatureStore {
     public List<CityComputedFeatures> getTopCitiesEconomy(int limit) {
         return featuresRepository.findTopByEconomyScore(
                 LocalDate.now(), PageRequest.of(0, limit));
+    }
+
+    /**
+     * API-safe ranking view for top overall cities.
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getTopOverallRankingView(int limit) {
+        return getTopCitiesOverall(limit).stream().map(this::toRankingView).toList();
+    }
+
+    /**
+     * API-safe ranking view for top economy cities.
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getTopEconomyRankingView(int limit) {
+        return getTopCitiesEconomy(limit).stream().map(this::toRankingView).toList();
+    }
+
+    /**
+     * Exposes cache + computation telemetry for observability endpoint.
+     */
+    public Map<String, Object> getComputationStats() {
+        long totalRequests = requestCount.get();
+        long totalHits = l1HitCount.get() + l2HitCount.get();
+        double hitRate = totalRequests > 0 ? (totalHits * 100.0) / totalRequests : 0.0;
+
+        Map<String, Object> stats = new LinkedHashMap<>();
+        stats.put("requests", totalRequests);
+        stats.put("l1Hits", l1HitCount.get());
+        stats.put("l2Hits", l2HitCount.get());
+        stats.put("cacheMisses", missCount.get());
+        stats.put("hitRatePct", Math.round(hitRate * 100.0) / 100.0);
+        stats.put("computeAttempts", computeAttemptCount.get());
+        stats.put("computeSuccess", computeSuccessCount.get());
+        stats.put("computeFailures", computeFailureCount.get());
+        stats.put("lastComputeAt", lastComputeAt);
+        stats.put("lastBatchStartedAt", lastBatchStartedAt);
+        stats.put("lastBatchCompletedAt", lastBatchCompletedAt);
+        stats.put("lastBatchSuccessCount", lastBatchSuccessCount);
+        stats.put("lastBatchFailureCount", lastBatchFailureCount);
+        stats.put("todayPersistedFeatureRows", featuresRepository.countByComputationDate(LocalDate.now()));
+        return stats;
     }
     
     /**
@@ -390,6 +460,35 @@ public class CityFeatureStore {
                 List.of(),
                 score != null ? 1.0 : 0.0
         );
+    }
+
+    private Map<String, Object> toRankingView(CityComputedFeatures feature) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        DimCitySafe dimCity = new DimCitySafe(feature);
+        row.put("citySlug", dimCity.citySlug());
+        row.put("cityName", dimCity.cityName());
+        row.put("country", dimCity.country());
+        row.put("computationDate", feature.getComputationDate());
+        row.put("overallScore", feature.getOverallScore());
+        row.put("economyScore", feature.getEconomyScore());
+        row.put("livabilityScore", feature.getLivabilityScore());
+        row.put("sustainabilityScore", feature.getSustainabilityScore());
+        row.put("growthScore", feature.getGrowthScore());
+        row.put("dataCompleteness", feature.getDataCompleteness());
+        return row;
+    }
+
+    /**
+     * Protect ranking API serialization from lazy-loading nulls and legacy rows.
+     */
+    private record DimCitySafe(String citySlug, String cityName, String country) {
+        DimCitySafe(CityComputedFeatures feature) {
+            this(
+                feature.getDimCity() != null ? feature.getDimCity().getCitySlug() : null,
+                feature.getDimCity() != null ? feature.getDimCity().getCityName() : null,
+                feature.getDimCity() != null ? feature.getDimCity().getCountry() : null
+            );
+        }
     }
     
     private Double safeScore(ScoreResult result) {

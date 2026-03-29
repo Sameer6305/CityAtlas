@@ -135,6 +135,15 @@ export async function fetchAnalyticsData(slug: string): Promise<AnalyticsData | 
 }
 
 /**
+ * Warm both city and analytics cache entries for smoother section navigation.
+ * Uses existing in-memory cache and inflight de-duplication; no new infrastructure.
+ */
+export function prefetchCityBundle(slug: string): void {
+  void fetchCityData(slug);
+  void fetchAnalyticsData(slug);
+}
+
+/**
  * Format population for display.
  * 8336817 → "8.3M" | 815201 → "815,201"
  */

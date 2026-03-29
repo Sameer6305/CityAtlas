@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_BASE_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+const UPSTREAM_TIMEOUT_MS = 8000;
+const MAX_RETRIES = 1;
 
 function buildTargetUrl(path: string[], request: NextRequest): string {
   const upstream = new URL(BACKEND_BASE_URL);
@@ -26,21 +28,58 @@ async function proxyRequest(request: NextRequest, path: string[]) {
 
   const method = request.method.toUpperCase();
   const hasBody = !['GET', 'HEAD'].includes(method);
+  const retryableMethod = ['GET', 'HEAD', 'OPTIONS'].includes(method);
+  const requestBody = hasBody ? await request.text() : undefined;
 
-  const response = await fetch(targetUrl, {
-    method,
-    headers,
-    body: hasBody ? await request.text() : undefined,
-    cache: 'no-store',
-  });
+  let lastError: unknown = null;
 
-  const responseText = await response.text();
-  const contentType = response.headers.get('content-type') || 'application/json';
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
 
-  return new NextResponse(responseText, {
-    status: response.status,
+    try {
+      const response = await fetch(targetUrl, {
+        method,
+        headers,
+        body: requestBody,
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+
+      const shouldRetry = retryableMethod && response.status >= 500 && attempt < MAX_RETRIES;
+      if (shouldRetry) {
+        continue;
+      }
+
+      const responseText = await response.text();
+      const contentType = response.headers.get('content-type') || 'application/json';
+
+      return new NextResponse(responseText, {
+        status: response.status,
+        headers: {
+          'content-type': contentType,
+          'cache-control': 'no-store',
+        },
+      });
+    } catch (error) {
+      lastError = error;
+      if (!(retryableMethod && attempt < MAX_RETRIES)) {
+        break;
+      }
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  const isAbort = lastError instanceof Error && lastError.name === 'AbortError';
+  return NextResponse.json({
+    error: isAbort ? 'Upstream timeout' : 'Upstream unavailable',
+    detail: isAbort
+      ? `Backend did not respond within ${UPSTREAM_TIMEOUT_MS}ms`
+      : 'Failed to fetch backend response',
+  }, {
+    status: isAbort ? 504 : 502,
     headers: {
-      'content-type': contentType,
       'cache-control': 'no-store',
     },
   });

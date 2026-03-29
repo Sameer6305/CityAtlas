@@ -1,16 +1,17 @@
 package com.cityatlas.backend.service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-
-import jakarta.annotation.PreDestroy;
 
 import com.cityatlas.backend.dto.response.AirQualityDTO;
 import com.cityatlas.backend.dto.response.AnalyticsResponse;
@@ -27,6 +28,7 @@ import com.cityatlas.backend.service.external.WeatherService;
 import com.cityatlas.backend.service.external.WorldBankService;
 import com.cityatlas.backend.service.external.WorldBankService.YearValue;
 
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -47,6 +49,9 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class CityDataAggregator {
+
+    private static final Duration API_TIMEOUT = Duration.ofSeconds(4);
+    private static final Duration AGGREGATION_TIMEOUT = Duration.ofSeconds(6);
 
     private final GeoDBCityService geoDBCityService;
     private final WorldBankService worldBankService;
@@ -72,6 +77,27 @@ public class CityDataAggregator {
             log.debug("Parallel fetch failed: {}", e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * Execute external calls asynchronously with timeout and null fallback.
+     * This keeps city responses partially available when one upstream is slow or down.
+     */
+    private <T> CompletableFuture<T> supplyAsyncWithFallback(String source, Supplier<T> supplier) {
+        return CompletableFuture
+            .supplyAsync(() -> {
+                try {
+                    return supplier.get();
+                } catch (Exception ex) {
+                    log.debug("{} request failed: {}", source, ex.getMessage());
+                    return null;
+                }
+            }, apiExecutor)
+            .completeOnTimeout(null, API_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
+            .exceptionally(ex -> {
+                log.debug("{} request timed out or failed: {}", source, ex.getMessage());
+                return null;
+            });
     }
 
     /** Helper: round a nullable Double to N decimal places. */
@@ -135,39 +161,36 @@ public class CityDataAggregator {
 
         final String cc = countryCode; // effectively-final for lambdas
         if (cc != null) {
-            fGdp = CompletableFuture.supplyAsync(() -> worldBankService.fetchGdpPerCapita(cc), apiExecutor);
-            fUnemployment = CompletableFuture.supplyAsync(() -> worldBankService.fetchUnemploymentRate(cc), apiExecutor);
-            fLiteracy = CompletableFuture.supplyAsync(() -> worldBankService.fetchLiteracyRate(cc), apiExecutor);
-            fPupilTeacher = CompletableFuture.supplyAsync(() -> worldBankService.fetchPupilTeacherRatio(cc), apiExecutor);
-            fRenewable = CompletableFuture.supplyAsync(() -> worldBankService.fetchRenewableEnergyPct(cc), apiExecutor);
-            fCo2 = CompletableFuture.supplyAsync(() -> worldBankService.fetchCo2PerCapita(cc), apiExecutor);
-            fHospitalBeds = CompletableFuture.supplyAsync(() -> worldBankService.fetchHospitalBeds(cc), apiExecutor);
-            fHealthExpenditure = CompletableFuture.supplyAsync(() -> worldBankService.fetchHealthExpenditure(cc), apiExecutor);
-            fLifeExpectancy = CompletableFuture.supplyAsync(() -> worldBankService.fetchLifeExpectancy(cc), apiExecutor);
-            fInternetUsers = CompletableFuture.supplyAsync(() -> worldBankService.fetchInternetUsers(cc), apiExecutor);
-            fMobileSubs = CompletableFuture.supplyAsync(() -> worldBankService.fetchMobileSubscriptions(cc), apiExecutor);
-            fElectricity = CompletableFuture.supplyAsync(() -> worldBankService.fetchElectricityAccess(cc), apiExecutor);
-            fLanguages = CompletableFuture.supplyAsync(() -> {
+            fGdp = supplyAsyncWithFallback("worldBank.gdp", () -> worldBankService.fetchGdpPerCapita(cc));
+            fUnemployment = supplyAsyncWithFallback("worldBank.unemployment", () -> worldBankService.fetchUnemploymentRate(cc));
+            fLiteracy = supplyAsyncWithFallback("worldBank.literacy", () -> worldBankService.fetchLiteracyRate(cc));
+            fPupilTeacher = supplyAsyncWithFallback("worldBank.pupilTeacher", () -> worldBankService.fetchPupilTeacherRatio(cc));
+            fRenewable = supplyAsyncWithFallback("worldBank.renewable", () -> worldBankService.fetchRenewableEnergyPct(cc));
+            fCo2 = supplyAsyncWithFallback("worldBank.co2", () -> worldBankService.fetchCo2PerCapita(cc));
+            fHospitalBeds = supplyAsyncWithFallback("worldBank.hospitalBeds", () -> worldBankService.fetchHospitalBeds(cc));
+            fHealthExpenditure = supplyAsyncWithFallback("worldBank.healthExpenditure", () -> worldBankService.fetchHealthExpenditure(cc));
+            fLifeExpectancy = supplyAsyncWithFallback("worldBank.lifeExpectancy", () -> worldBankService.fetchLifeExpectancy(cc));
+            fInternetUsers = supplyAsyncWithFallback("worldBank.internetUsers", () -> worldBankService.fetchInternetUsers(cc));
+            fMobileSubs = supplyAsyncWithFallback("worldBank.mobileSubscriptions", () -> worldBankService.fetchMobileSubscriptions(cc));
+            fElectricity = supplyAsyncWithFallback("worldBank.electricityAccess", () -> worldBankService.fetchElectricityAccess(cc));
+            fLanguages = supplyAsyncWithFallback("restCountries.languages", () -> {
                 CountryInfo info = restCountriesService.fetchCountry(cc);
                 return (info != null && info.languages() != null) ? new ArrayList<>(info.languages()) : null;
-            }, apiExecutor);
+            });
         }
 
         // Weather + AQI fire in parallel with World Bank calls
         final String cn = cityName;
         final Double lat = latitude, lon = longitude;
-        CompletableFuture<WeatherDTO> fWeather = CompletableFuture.supplyAsync(() -> {
-            try { return weatherService.fetchCurrentWeather(cn).block(); }
-            catch (Exception e) { log.debug("Weather not available for {}: {}", cn, e.getMessage()); return null; }
-        }, apiExecutor);
+        CompletableFuture<WeatherDTO> fWeather = supplyAsyncWithFallback("weather.current", () ->
+            weatherService.fetchCurrentWeather(cn).block(API_TIMEOUT)
+        );
 
-        CompletableFuture<AirQualityDTO> fAqi = CompletableFuture.supplyAsync(() -> {
-            try {
-                return (lat != null && lon != null)
-                    ? airQualityService.fetchAirQualityByCoordinates(lat, lon, null).block()
-                    : airQualityService.fetchAirQuality(cn).block();
-            } catch (Exception e) { log.debug("AQI not available for {}: {}", cn, e.getMessage()); return null; }
-        }, apiExecutor);
+        CompletableFuture<AirQualityDTO> fAqi = supplyAsyncWithFallback("airQuality.current", () ->
+            (lat != null && lon != null)
+                ? airQualityService.fetchAirQualityByCoordinates(lat, lon, null).block(API_TIMEOUT)
+                : airQualityService.fetchAirQuality(cn).block(API_TIMEOUT)
+        );
 
         // ── Step 3: Wait for ALL to complete ──
         CompletableFuture.allOf(
@@ -175,7 +198,13 @@ public class CityDataAggregator {
             fHospitalBeds, fHealthExpenditure, fLifeExpectancy,
             fInternetUsers, fMobileSubs, fElectricity,
             fLanguages, fWeather, fAqi
-        ).join();
+        )
+        .completeOnTimeout(null, AGGREGATION_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
+        .exceptionally(ex -> {
+            log.debug("Aggregation wait finished with partial data: {}", ex.getMessage());
+            return null;
+        })
+        .join();
 
         // ── Step 4: Collect results (null-safe) ──
         Double gdpPerCapita = safeGet(fGdp);
