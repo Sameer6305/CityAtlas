@@ -38,10 +38,10 @@ class CityControllerIntegrationTest {
     private CityDataAggregator cityDataAggregator;
 
     @Test
-    void cityEndpointRequiresAuthentication() throws Exception {
-        // FIXED: Verifies protected routes return 401 when JWT is missing.
+    void cityEndpointAllowsPublicReadAccess() throws Exception {
+        // Public read endpoints should be reachable without JWT.
         mockMvc.perform(get("/cities/new-york"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isOk());
     }
 
     @Test
