@@ -15,6 +15,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api/backend';
+const REQUEST_TIMEOUT_MS = 12000;
 
 interface AiSummaryData {
   personality: string;
@@ -106,9 +107,12 @@ export default function AISummaryPage() {
 
   useEffect(() => {
     if (!citySlug) return;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
     setLoading(true);
     setError(null);
-    fetch(`${API_URL}/ai/summary/${citySlug}`)
+    fetch(`${API_URL}/ai/summary/${citySlug}`, { signal: controller.signal })
       .then(res => {
         if (!res.ok) throw new Error(`City not found or AI summary unavailable (${res.status})`);
         return res.json();
@@ -118,9 +122,18 @@ export default function AISummaryPage() {
         setLoading(false);
       })
       .catch(err => {
-        setError(err.message);
+        if (err?.name === 'AbortError') {
+          setError(`Request timed out after ${REQUEST_TIMEOUT_MS}ms`);
+        } else {
+          setError(err.message);
+        }
         setLoading(false);
       });
+
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [citySlug]);
 
   if (loading) {

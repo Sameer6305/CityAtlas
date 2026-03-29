@@ -13,5 +13,5 @@ RUN apt-get update \
 	&& rm -rf /var/lib/apt/lists/*
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
-HEALTHCHECK --interval=15s --timeout=5s --retries=5 CMD curl -fsS http://localhost:8080/api/health || exit 1
+HEALTHCHECK --interval=15s --timeout=5s --retries=5 CMD curl -fsS http://127.0.0.1:8080/api/health || exit 1
 ENTRYPOINT ["java", "-jar", "app.jar"]

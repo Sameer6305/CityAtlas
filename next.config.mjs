@@ -11,8 +11,6 @@ const resolveOrigin = (value) => {
 
 const dynamicConnectSrc = [
   "'self'",
-  'http://localhost:8080',
-  'https://localhost:8080',
   resolveOrigin(process.env.NEXT_PUBLIC_API_URL),
   resolveOrigin(process.env.BACKEND_API_URL),
 ].filter(Boolean);
@@ -66,7 +64,7 @@ const nextConfig = {
 
   // Suppress the metadataBase warning (set base URL for OG images)
   env: {
-    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'https://cityatlas.example.com',
   },
 };
 

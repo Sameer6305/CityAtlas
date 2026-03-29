@@ -53,7 +53,7 @@ public class SecurityConfig {
         this.rateLimitFilter = rateLimitFilter;
     }
 
-    @Value("${cityatlas.cors.allowed-origins:http://localhost:3000,http://localhost:3001}")
+    @Value("${cityatlas.cors.allowed-origins}")
     private String corsAllowedOrigins;
 
     /**
@@ -62,7 +62,7 @@ public class SecurityConfig {
      * Development Mode:
      * - All endpoints: permitAll()
      * - CSRF: Disabled (standard for REST APIs)
-     * - CORS: Enabled for localhost frontend
+    * - CORS: Enabled for configured frontend origins
      * - Sessions: Stateless (preparation for JWT)
      */
     @Bean

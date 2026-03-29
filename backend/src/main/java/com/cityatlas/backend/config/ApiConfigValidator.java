@@ -3,6 +3,7 @@ package com.cityatlas.backend.config;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.core.env.Environment;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Component;
 public class ApiConfigValidator {
 
     private final ExternalApiConfig apiConfig;
+    private final Environment environment;
 
     /**
      * Validate API configuration after application startup
@@ -87,6 +89,10 @@ public class ApiConfigValidator {
         
         // Summary
         if (hasPlaceholders) {
+            boolean productionProfile = environment.acceptsProfiles(org.springframework.core.env.Profiles.of("prod"));
+            if (productionProfile) {
+                throw new IllegalStateException("Placeholder API keys are not allowed when SPRING_PROFILES_ACTIVE=prod");
+            }
             log.warn("=================================================================");
             log.warn("⚠️  WARNING: Placeholder API keys detected!");
             log.warn("External API integrations will NOT work until real keys are provided.");

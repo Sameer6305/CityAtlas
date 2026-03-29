@@ -351,6 +351,7 @@ public class EtlScheduler {
             // NOTE: Intentionally not persisting fact_user_events_daily yet.
             // Safe persistence here requires an explicit upsert/accumulation strategy
             // to avoid violating grain uniqueness and undercounting across 15-min windows.
+            // Full ETL persistence requires idempotent upsert logic (future work).
             
             long duration = System.currentTimeMillis() - startTime;
             log.info("[ETL-SCHED] === Events Aggregation Complete === Duration: {}ms, Facts: {}",

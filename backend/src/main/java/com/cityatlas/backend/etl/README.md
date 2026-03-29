@@ -64,7 +64,7 @@ Capture user interactions with **minimal latency** for real-time analytics dashb
 ```properties
 # application.properties
 kafka.enabled=true
-kafka.bootstrap-servers=localhost:9092
+kafka.bootstrap-servers=kafka-broker:9092
 kafka.consumer.group-id=cityatlas-etl-consumer
 ```
 

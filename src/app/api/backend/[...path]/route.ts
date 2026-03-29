@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_BASE_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+const BACKEND_BASE_URL = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL;
 const UPSTREAM_TIMEOUT_MS = 8000;
 const MAX_RETRIES = 1;
 
+function getBackendBaseUrl(): string {
+  if (!BACKEND_BASE_URL) {
+    throw new Error('BACKEND_API_URL or NEXT_PUBLIC_API_URL must be configured');
+  }
+  return BACKEND_BASE_URL;
+}
+
 function buildTargetUrl(path: string[], request: NextRequest): string {
-  const upstream = new URL(BACKEND_BASE_URL);
+  const upstream = new URL(getBackendBaseUrl());
   const cleanBasePath = upstream.pathname.replace(/\/$/, '');
   const joinedPath = path.join('/');
 
