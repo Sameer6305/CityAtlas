@@ -58,6 +58,38 @@ docker compose down -v
 docker compose up -d db
 ```
 
+## Local Run and Docker Deployment
+
+### Run locally (without Docker)
+
+1. Copy `.env.example` to `.env` and fill required secrets.
+2. Start PostgreSQL locally (or with `docker compose up -d db`).
+3. Start backend from `backend/`:
+  - Windows PowerShell: `./mvnw spring-boot:run`
+4. Start frontend from repo root:
+  - `npm install`
+  - `npm run dev`
+5. Verify health checks:
+  - Backend: `http://localhost:8080/api/health`
+  - Frontend: `http://localhost:3000/health`
+
+### Deploy with Docker Compose
+
+1. Ensure `.env` exists and uses proxy mode:
+  - `NEXT_PUBLIC_API_URL=/api/backend`
+  - `BACKEND_API_URL=http://backend:8080/api` (in compose runtime)
+2. Build and start containers:
+  - `docker compose up --build -d`
+3. Confirm healthy containers:
+  - `docker compose ps`
+4. Validate backend health from host:
+  - `http://localhost:8080/api/health`
+5. Validate frontend app and health endpoint:
+  - `http://localhost:3000`
+  - `http://localhost:3000/health`
+6. Stream logs for diagnostics:
+  - `docker compose logs -f backend frontend`
+
 ## Demo Credentials
 
 - Email: `YOUR_DEMO_LOGIN_EMAIL`

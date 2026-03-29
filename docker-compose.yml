@@ -11,6 +11,11 @@ services:
       - "5432:5432"
     volumes:
       - cityatlas_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cityatlas -d cityatlas"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
 
   backend:
     build: ./backend
@@ -23,7 +28,14 @@ services:
     env_file:
       - .env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
 
   frontend:
     build:
@@ -37,7 +49,14 @@ services:
     env_file:
       - .env
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:3000/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
 
 volumes:
   cityatlas_pg_data:

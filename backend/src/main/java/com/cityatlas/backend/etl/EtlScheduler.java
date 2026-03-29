@@ -5,6 +5,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -19,6 +21,8 @@ import com.cityatlas.backend.entity.analytics.FactUserEventsDaily;
 import com.cityatlas.backend.etl.DataCleaningService.CleaningResult;
 import com.cityatlas.backend.etl.MetricNormalizationService.NormalizedMetric;
 import com.cityatlas.backend.repository.AnalyticsEventRepository;
+import com.cityatlas.backend.repository.DimCityRepository;
+import com.cityatlas.backend.repository.FactCityMetricsRepository;
 import com.cityatlas.backend.repository.MetricsRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -105,11 +109,10 @@ public class EtlScheduler {
     // Source data repositories
     private final MetricsRepository metricsRepository;
     private final AnalyticsEventRepository eventRepository;
-    
-    // Note: In production, add repositories for analytics tables
-    // private final DimCityRepository dimCityRepository;
-    // private final FactCityMetricsRepository factMetricsRepository;
-    // private final FactUserEventsDailyRepository factEventsRepository;
+
+    // Analytics repositories (safe/idempotent persistence only)
+    private final DimCityRepository dimCityRepository;
+    private final FactCityMetricsRepository factMetricsRepository;
     
     // ==========================================================================
     // BATCH ID GENERATION
@@ -157,14 +160,14 @@ public class EtlScheduler {
             // -----------------------------------------------------------------
             // STEP 2: In production, compare with existing and apply SCD Type 2
             // -----------------------------------------------------------------
-            
-            // List<DimCity> currentDims = dimCityRepository.findByIsCurrentTrue();
-            // DimensionChangeSet changes = dimensionLoaderService.detectChanges(currentDims);
-            // 
-            // if (changes.hasChanges()) {
-            //     dimCityRepository.saveAll(changes.expirations);
-            //     dimCityRepository.saveAll(changes.inserts);
-            // }
+
+            // Safe persistence only: initial dimension bootstrap.
+            // Incremental SCD2 upsert remains intentionally disabled until full change-set
+            // persistence flow is wired end-to-end.
+            if (dimCityRepository.count() == 0 && !freshDimCities.isEmpty()) {
+                dimCityRepository.saveAll(freshDimCities);
+                log.info("[ETL-SCHED] Seeded dim_city with {} rows", freshDimCities.size());
+            }
             
             long duration = System.currentTimeMillis() - startTime;
             log.info("[ETL-SCHED] === Dimension Refresh Complete === Duration: {}ms, Cities: {}",
@@ -241,9 +244,16 @@ public class EtlScheduler {
             // -----------------------------------------------------------------
             // AGGREGATE: Build fact rows
             // -----------------------------------------------------------------
-            
-            // In production: Load dim_city lookup and previous day metrics
-            Map<Long, DimCity> dimCityLookup = new HashMap<>();
+
+            Map<Long, DimCity> dimCityLookup = dimCityRepository.findByIsCurrentTrue().stream()
+                .filter(dim -> dim.getSourceCity() != null && dim.getSourceCity().getId() != null)
+                .collect(Collectors.toMap(
+                    dim -> dim.getSourceCity().getId(),
+                    Function.identity(),
+                    (left, right) -> left,
+                    HashMap::new
+                ));
+
             Map<String, Double> previousDayMetrics = new HashMap<>();
             
             List<FactCityMetrics> facts = aggregationService.aggregateCityMetrics(
@@ -253,9 +263,15 @@ public class EtlScheduler {
             // -----------------------------------------------------------------
             // LOAD: Upsert into fact table
             // -----------------------------------------------------------------
-            
-            // In production:
-            // factMetricsRepository.saveAll(facts);
+
+            List<FactCityMetrics> newFacts = facts.stream()
+                .filter(f -> !factMetricsRepository.existsByDimCityAndMetricTypeAndMetricDate(
+                    f.getDimCity(), f.getMetricType(), f.getMetricDate()))
+                .toList();
+
+            if (!newFacts.isEmpty()) {
+                factMetricsRepository.saveAll(newFacts);
+            }
             
             long duration = System.currentTimeMillis() - startTime;
             log.info("[ETL-SCHED] === Metrics Snapshot Complete === Duration: {}ms, Facts: {}",
@@ -331,9 +347,10 @@ public class EtlScheduler {
             // -----------------------------------------------------------------
             // LOAD: Upsert into fact table (accumulate into today's row)
             // -----------------------------------------------------------------
-            
-            // In production: Use upsert with accumulation logic
-            // factEventsRepository.upsertDailyAggregates(facts);
+
+            // NOTE: Intentionally not persisting fact_user_events_daily yet.
+            // Safe persistence here requires an explicit upsert/accumulation strategy
+            // to avoid violating grain uniqueness and undercounting across 15-min windows.
             
             long duration = System.currentTimeMillis() - startTime;
             log.info("[ETL-SCHED] === Events Aggregation Complete === Duration: {}ms, Facts: {}",
